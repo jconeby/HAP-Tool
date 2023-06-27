@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blue Team</title>
+  <link rel="stylesheet" href="bootstrap-5.3.0-dist\css\bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f7f7f7;
+    }
+
+    .album {
+      min-height: 100vh;
+      padding-top: 3rem;
+      padding-bottom: 3rem;
+    }
+
+    .card {
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-img {
+      height: 300px;
+      object-fit: cover;
+    }
+    body {
+            background-color: #000;
+            color: #00FF00;
+        }
+
+        .navbar {
+            background-color: #000;
+            border-bottom: 1px solid #00FF00;
+        }
+
+        .navbar-brand,
+        .navbar-nav .nav-link {
+            color: #00FF00;
+            transition: color 0.3s ease;
+        }
+
+        .navbar-brand:hover,
+        .navbar-nav .nav-link:hover {
+            color: #FFF;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        form {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+            border: 1px solid #00FF00;
+            border-radius: 5px;
+            background-color: #000;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            color: #00FF00;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #00FF00;
+            border-radius: 5px;
+            background-color: #000;
+            color: #00FF00;
+            margin-bottom: 20px;
+        }
+
+        input[type="submit"] {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #00FF00;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #009900;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 3rem;
+          background-color: #444444;
+          color: #ffffff;
+          padding: 1rem;
+          }
+
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">OPS C2</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="ir_script.html">Enumerate</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">IOC</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Chat</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+  <main>
+    <section class="album py-5">
+      <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+          <h2>Blue Team Members</h2>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+
+          <!-- Team Member 1 -->
+          <div class="col">
+            <div class="card">
+              <img src="img\threat-actor-hat.jpg" class="card-img-top" alt="Team Member 1">
+              <div class="card-body">
+                <h5 class="card-title">Capt Spiegel</h5>
+                <p class="card-text">Mission Lead</p>
+                <p class="card-text">Acts as the mission lead for the team and ensures that all strategic objectives are accomplished</p>
+            </div>
+          </div>
+        </div>
+
+          <!-- Team Member 2 -->
+          <div class="col">
+            <div class="card">
+              <img src="img\mustang-panda.jpg" class="card-img-top" alt="Team Member 2">
+              <div class="card-body">
+                <h5 class="card-title">2d Lt Coneby</h5>
+                <p class="card-text">Crew Lead</p>
+                <p class="card-text">Ensures that operational objectives are completed and realigns personnel as needed</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Member 3 -->
+          <div class="col">
+            <div class="card">
+              <img src="img\wicked-spider.jpg" class="card-img-top" alt="Team Member 3">
+              <div class="card-body">
+                <h5 class="card-title">MSgt Alvarez</h5>
+                <p class="card-text">Host Analyst</p>
+                <p class="card-text">Performs host analysis on various endpoints and performs incident response as needed</p>
+              </div>
+            </div>
+          </div>
+
+           <!-- Team Member 4 -->
+           <div class="col">
+            <div class="card">
+              <img src="img\dungeon-spider.jpg" class="card-img-top" alt="Team Member 4">
+              <div class="card-body">
+                <h5 class="card-title">TSgt Setal</h5>
+                <p class="card-text">Host Analyst</p>
+                <p class="card-text">Performs host analysis on various endpoints and performs incident response as needed</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Member 5 -->
+          <div class="col">
+            <div class="card">
+              <img src="img\mummy-spider.jpg" class="card-img-top" alt="Team Member 5">
+              <div class="card-body">
+                <h5 class="card-title">SSgt Rodriguez</h5>
+                <p class="card-text">Host Analyst</p>
+                <p class="card-text">Performs host analysis on various endpoints and performs incident response as needed</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Member 6 -->
+          <div class="col">
+            <div class="card">
+              <img src="img\ember-bear.jpg" class="card-img-top" alt="Team Member 6">
+              <div class="card-body">
+                <h5 class="card-title">SrA Kramer</h5>
+                <p class="card-text">Network Analyst</p>
+                <p class="card-text">The member in charge of monitoring Kibana dashboards and investigating network cases as needed</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add more team members here -->
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-dark py-4">
+    <div class="container">
+      <p class="text-white text-center">© 2023 Blue Team. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="bootstrap-5.3.0-dist\js\bootstrap.min.js"></script>
+</body>
+</html>

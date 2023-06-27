@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPSC2</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #00FF00;
+        }
+
+        .navbar {
+            background-color: #000;
+            border-bottom: 1px solid #00FF00;
+        }
+
+        .navbar-brand,
+        .navbar-nav .nav-link {
+            color: #00FF00;
+            transition: color 0.3s ease;
+        }
+
+        .navbar-brand:hover,
+        .navbar-nav .nav-link:hover {
+            color: #FFF;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        form {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+            border: 1px solid #00FF00;
+            border-radius: 5px;
+            background-color: #000;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            color: #00FF00;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #00FF00;
+            border-radius: 5px;
+            background-color: #000;
+            color: #00FF00;
+            margin-bottom: 20px;
+        }
+
+        input[type="submit"] {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #00FF00;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #009900;
+        }
+    </style>
+    <link rel="stylesheet" href="bootstrap-5.3.0-dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">OPS C2</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="ir_script.html">Enumerate</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">IOC</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Chat</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Form Content -->
+<div class="form-container">
+    <h1>IR Script</h1>
+    <form action="execute.php" method="post">
+        <label for="hostname">Hostname:</label>
+        <input type="text" id="hostname" name="hostname" required><br><br>
+        
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br><br>
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+        
+        <input type="submit" value="Run Script" onclick="runScript(event)">
+    </form>
+</div>
+
+<script src="bootstrap-5.3.0-dist/js/bootstrap.min.js"></script>
+<script>
+    function runScript(event) {
+        var spinner = document.createElement("div");
+        spinner.className = "spinner-border text-light";
+        spinner.style.marginTop = "20px";
+        document.querySelector(".form-container").appendChild(spinner);
+
+        var submitButton = document.querySelector("input[type='submit']");
+        submitButton.disabled = true;
+        document.body.style.cursor = "wait";
+
+        // Send an asynchronous request to execute.php
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "execute.php", true);
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    var response = xhr.responseText;
+                    var outputContainer = document.createElement("div");
+                    outputContainer.innerHTML = "<pre>" + response + "</pre>";
+                    document.querySelector(".form-container").appendChild(outputContainer);
+
+                    var messageBox = document.createElement("div");
+                    messageBox.className = "alert alert-success";
+                    messageBox.textContent = "Incident response script completed!";
+                    document.querySelector(".form-container").appendChild(messageBox);
+
+                    submitButton.disabled = false;
+                    document.body.style.cursor = "default";
+                } else {
+                    var messageBox = document.createElement("div");
+                    messageBox.className = "alert alert-danger";
+                    messageBox.textContent = "An error occurred while executing the script.";
+                    document.querySelector(".form-container").appendChild(messageBox);
+
+                    submitButton.disabled = false;
+                    document.body.style.cursor = "default";
+                }
+
+                document.querySelector(".spinner-border").remove();
+            }
+        };
+
+        var hostname = document.getElementById("hostname").value;
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+
+        var params = "hostname=" + encodeURIComponent(hostname) + "&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password);
+        xhr.send(params);
+
+        event.preventDefault(); // Prevent the default form submission
+    }
+</script>
+</body>
+</html>
