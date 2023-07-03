@@ -1,4 +1,4 @@
-﻿# Processes
+﻿# PROCESSES
 function Get-WmiProcess 
 {
     [cmdletbinding()]
@@ -40,8 +40,6 @@ function Get-WmiProcess
     }
 } 
 
-<# Example
-
 # Change creds as needed
 $username = 'Administrator'
 $password = 'P@55w0rd!'
@@ -74,7 +72,6 @@ $elasticPassword = 'Fy590f0TI7Wg7L0MO4Og44gd' # Password is on the TFPlenum home
 <# This code will loop through each PowerShell object in the array 
 and send a document to the Elastic API #>
 
-<#
 foreach ($process in $Processes)
 {
     $process = @{
@@ -92,9 +89,10 @@ foreach ($process in $Processes)
 
 }
 
-#>
 
-# Services
+
+
+# SERVICES
 function Get-ServiceInfo
 {
     [cmdletbinding()]
@@ -137,8 +135,6 @@ function Get-ServiceInfo
         $services
     }
 } 
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -185,10 +181,7 @@ foreach ($service in $Services)
 }
 
 
-#>
-
-
-# Connections
+# CONNECTIONS
 function Get-Connection {
     [CmdletBinding()]
     Param (
@@ -236,9 +229,6 @@ function Get-Connection {
     }
 }
 
-
-<# Example
-
 # Change creds as needed
 $username = 'Administrator'
 $password = 'P@55w0rd!'
@@ -283,10 +273,9 @@ foreach ($connection in $Connections) {
     # Send the JSON data as the request body to create the document
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
-#>
 
 
-# Scheduled Tasks
+# SCHEDULED TASKS
 function Get-SchTask
 {
     [cmdletbinding()]
@@ -332,8 +321,7 @@ function Get-SchTask
     }    
 }
 
-<# Example
-
+# Change creds as needed
 $username = 'Administrator'
 $password = 'P@55w0rd!'
 
@@ -378,10 +366,9 @@ foreach ($task in $Tasks) {
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
 
-#>
 
 
-# Prefetch
+# PREFETCH
 function Get-Prefetch 
 {
     [cmdletbinding()]
@@ -425,8 +412,6 @@ function Get-Prefetch
         $prefetchData
     }
 }
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -472,10 +457,9 @@ foreach ($prefetch in $Prefetches) {
     # Send the JSON data as the request body to create the document
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
-#>
 
 
-# OS Information
+# OS INFORMATION
 function Get-OSInfo 
 {
     [cmdletbinding()]
@@ -513,8 +497,6 @@ function Get-OSInfo
         $osData
     }
 }
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -562,10 +544,7 @@ foreach ($os in $OSInfo) {
 }
 
 
-#>
-
-
-# Registry Run Keys
+# REGISTRY
 function Get-RegistryRun
 {
     [CmdletBinding()]
@@ -584,14 +563,10 @@ function Get-RegistryRun
         If (!$Credential) {
             $Credential = Get-Credential
         }
-
-
     }
 
     Process
-     {
-        Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
-            # Define registry run keys
+    {
         $registryRunKeys = @(
             [PSCustomObject]@{
                 Key         = "HKCU:\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
@@ -641,23 +616,21 @@ function Get-RegistryRun
                 Key         = "HKCU:\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunServices"
                 Description = "This key contains the list of services that are configured to run when the user logs in"
             }
-
         )
 
-            $registryRunData = foreach ($runKey in $registryRunKeys) {
+        Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+            $registryRunData = foreach ($runKey in $using:registryRunKeys) {
                 $key = $runKey.Key
                 $description = $runKey.Description
                 if (Test-Path $key) {
-                    Get-ItemProperty -Path $key | Select-Object -Property *, @{Name = 'Description'; Expression = {$description}}, @{Name = 'Time'; Expression = {(Get-Date).ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'")}}
+                    Get-ItemProperty -Path $key | Select-Object -Property *, @{Name = 'Description'; Expression = {$using:description}}
                 }
             }
 
             $registryRunData
-        } 
+        }
     }
 }
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -704,10 +677,7 @@ foreach ($item in $RegistryRun) {
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
 
-#>
-
-
-# Startup Folders
+# STARTUPS
 function Get-StartupFolders
 {
     [CmdletBinding()]
@@ -731,11 +701,11 @@ function Get-StartupFolders
     {
         $startupFolders = @(
             @{
-                Path        = ($env:APPDATA) + '\Microsoft\Windows\Start Menu\Programs\Startup'
+                Path        = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
                 Description = "User Startup Folder"
             }
             @{
-                Path        = ($env:ProgramData) + '\Microsoft\Windows\Start Menu\Programs\Startup'
+                Path        = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
                 Description = "All Users Startup Folder"
             }
         )
@@ -769,8 +739,6 @@ function Get-StartupFolders
         return $startupData
     }
 }
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -817,9 +785,9 @@ foreach ($startupItem in $startupData) {
     # Send the JSON data as the request body to create the document
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential
 }
-#>
 
-# Local Users
+
+# LOCAL USERS
 function Get-LUser
 {
     [CmdletBinding()]
@@ -870,8 +838,6 @@ function Get-LUser
     }
 }
 
-<# Example
-
 # Change creds as needed
 $username = 'Administrator'
 $password = 'P@55w0rd!'
@@ -919,9 +885,8 @@ foreach ($user in $users) {
 }
 
 
-#>
 
-# Local Groups
+# LOCAL GROUPS
 function Get-LGroup
 {
     [CmdletBinding()]
@@ -960,8 +925,6 @@ function Get-LGroup
         }
     }
 }
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -1006,9 +969,7 @@ foreach ($group in $groups) {
 }
 
 
-#>
-
-# Local Group Members
+# LOCAL GROUP MEMBERS
 function Get-LGroupMembers
 {
     [cmdletbinding()]
@@ -1055,8 +1016,6 @@ function Get-LGroupMembers
     } 
 }
 
-<# Example
-
 # Change creds as needed
 $username = 'Administrator'
 $password = 'P@55w0rd!'
@@ -1102,9 +1061,9 @@ foreach ($groupMember in $groupMembersData) {
     # Send the JSON data as the request body to create the document
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
-#>
 
-# Shares
+
+# SHARES
 function Get-ShareInfo
 {
     [cmdletbinding()]
@@ -1132,8 +1091,6 @@ function Get-ShareInfo
         }
     }    
 }
-
-<# Example
 
 # Change creds as needed
 $username = 'Administrator'
@@ -1180,9 +1137,9 @@ foreach ($share in $shareInfo) {
     # Send the JSON data as the request body to create the document
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
-#>
 
-# Logon History
+
+# LOGON HISTORY
 function Get-LogOnHistory
 {
     [cmdletbinding()]
@@ -1253,7 +1210,6 @@ function Get-LogOnHistory
     }    
 }
 
-<# Example
 # Change creds as needed
 $username = 'Administrator'
 $password = 'P@55w0rd!'
@@ -1299,18 +1255,17 @@ foreach ($logon in $logonHistory) {
     # Send the JSON data as the request body to create the document
     Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
 }
-#>
-
-#>
 
 
 # Exports Event Log
-
 function Get-CriticalEventXML
 { 
     [cmdletbinding()]
     Param
     (
+        [Parameter()]
+        [PSCustomObject]
+        $EventList,
 
         [DateTime]
         $BeginTime,
@@ -1340,87 +1295,8 @@ function Get-CriticalEventXML
             New-Item -Path ($env:USERPROFILE + '\AppData\Local\Temp') -Name XML -ItemType Directory
         } # create the dir if it doesn't exist
 
-
-        # List of Event IDs to capture
-            $eventIDs = @(
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4624
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4634
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4688
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4698
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4702
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4740
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4625
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 5152
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 5154
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 5155
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 5156
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 5157
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4648
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4672
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4673
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4769
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 4771
-                },
-                [PSCustomObject]@{
-                    Event_Log = 'Security'
-                    ID = 5140
-                }
-            )
-
-
         Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
-            
-            $events = foreach ($event in $using:eventIDs) {
+            $events = foreach ($event in $using:EventList) {
                 Get-WinEvent -FilterHashtable @{
                     LogName    = $event.Event_Log
                     StartTime  = $using:BeginTime
@@ -1443,11 +1319,7 @@ function Get-CriticalEventXML
             Remove-Item -Path $using:export_path
         }
 
-     }
-}
-
-<# Example
-# Elasticsearch server URL
+        # Elasticsearch server URL
         $elasticsearchUrl = "https://10.109.35.100:9200"
 
         # Index name
@@ -1484,402 +1356,7 @@ function Get-CriticalEventXML
                 Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
             }
         }
-#>
-
-
-# Enrich Events -- This is meant to have event objects passed to it
-function Update-EventList {
-    [cmdletbinding()]
-    Param (
-        [Parameter(ValueFromPipeline=$true,Mandatory=$true)]
-        [Array]
-        $Events
-    )
-
-    Process {
-        foreach ($event in $Events) {
-            if ($event.Id -eq '4624') {
-                [regex]$regex = '\s[\d]{1,2}\s'
-                $LogonType = $regex.Matches($event[0].Message)[0].Value
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "User Logon"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityID = $event.Properties[0].Value
-                    AccountName = $event.Properties[1].Value
-                    AccountDomain = $event.Properties[2].Value
-                    LogonID = $event.Properties[3].Value
-                    ProcessId = $event.Properties[16].Value
-                    ProcessName = $event.Properties[17].Value
-                    WorkstationName = $event.Properties[18].Value
-                    SourceNetworkAddress = $event.Properties[19].Value
-                    SourcePort = $event.Properties[20].Value
-                    LogonProcess = $event.Properties[21].Value
-                    LogonType = $LogonType
-                }
-            } elseif ($event.Id -eq '4625') {
-                [regex]$regex = '\s[\d]{1,2}\s'
-                $LogonType = $regex.Matches($event[0].Message)[0].Value
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Failed Logon"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityID = $event.Properties[0].Value
-                    AccountName = $event.Properties[1].Value
-                    AccountDomain = $event.Properties[2].Value
-                    LogonID = $event.Properties[3].Value
-                    ProcessID = $event.Properties[17].Value
-                    ProcessName = $event.Properties[18].Value
-                    WorkstationName = $event.Properties[19].Value
-                    SourceNetworkAddress = $event.Properties[20].Value
-                    SourcePort = $event.Properties[21].Value
-                    LogonType = $LogonType
-                }
-            } elseif ($event.id -eq '4648') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Process Launch"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityId = $event.Properties[0].value
-                    AccountName = $event.Properties[1].value
-                    AccountDomain = $event.Properties[2].value
-                    LogonId = $event.Properties[3].value
-                    AccountCredentialsUsed = $event.Properties[5].value
-                    AccountCredentials = $event.Properties[6].value
-                    TargetServerName = $event.Properties[8].value
-                    ProcessId = $event.Properties[10].value
-                    ProcessName = $event.Properties[11].value
-                    SourceNetworkAddress = $event.Properties[12].value
-                    SourcePort = $event.Properties[13].value
-                }
-            } elseif ($event.id -eq '4672') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Process Launch"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityId = $event.Properties[0].value
-                    AccountName = $event.Properties[1].value
-                    AccountDomain = $event.Properties[2].value
-                    LogonId = $event.Properties[3].value
-                    Privileges = $event.Properties[4].value
-                }
-            } elseif ($event.id -eq '4673') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Process Launch"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityId = $event.Properties[0].value
-                    AccountName = $event.Properties[1].value
-                    AccountDomain = $event.Properties[2].value
-                    LogonId = $event.Properties[3].value
-                    Server = $event.Properties[4].value
-                    ServiceName = $event.Properties[5].value
-                    ProcessId = $event.Properties[6].value
-                    ProcessName = $event.Properties[7].value
-                    Privileges = $event.Properties[8].value
-                }
-            } elseif ($event.Id -eq '4688') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Process Launch"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityID = $event.Properties[0].Value
-                    AccountName = $event.Properties[1].Value
-                    AccountDomain = $event.Properties[2].Value
-                    LogonID = $event.Properties[3].Value
-                    ProcessID = $event.Properties[4].Value
-                    ProcessName = $event.Properties[5].Value
-                    CommandLine = $event.Properties[8].Value
-                    ParentProcessID = $event.Properties[7].Value
-                    ParentProcessName = $event.Properties[13].Value
-                }
-            } elseif ($event.Id -eq '4698') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Schedule Task Creation"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityID = $event.Properties[0].Value
-                    AccountName = $event.Properties[1].Value
-                    AccountDomain = $event.Properties[2].Value
-                    TaskName = $event.Properties[4].Value
-                    TaskContent = $event.Properties[5].Value
-                    ProcessID = $event.Properties[7].Value
-                    ParentProcessID = $event.Properties[8].Value
-                }
-            } elseif ($event.Id -eq '4702') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Schedule Task Updated"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityID = $event.Properties[0].Value
-                    AccountName = $event.Properties[1].Value
-                    AccountDomain = $event.Properties[2].Value
-                    TaskName = $event.Properties[4].Value
-                    TaskContent = $event.Properties[4].Value
-                    ProcessID = $event.Properties[7].Value
-                    ParentProcessID = $event.Properties[8].Value
-                }
-            } elseif ($event.Id -eq '4740') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "User Account Lockout"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityID = $event.Properties[2].Value
-                    AccountName = $event.Properties[0].Value
-                    ComputerName = $event.Properties[1].Value
-                }
-            } elseif ($event.Id -eq '4769') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "User Account Lockout"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    AccountName = $event.Properties[0].Value
-                    AccountDomain = $event.Properties[1].Value
-                    ServiceName = $event.Properties[2].Value
-                    ServiceId = $event.Properties[3].Value
-                    ClientAddress = $event.Properties[4].Value
-                    ClientPort = $event.Properties[5].Value
-                    TicketOptions = $event.Properties[6].Value
-                    TicketEncryptionType = $event.Properties[7].Value
-                    FailureCode = $event.Properties[8].Value
-                }
-            } elseif ($event.Id -eq '4771') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "User Account Lockout"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    SecurityId = $event.Properties[1].Value
-                    AccountName = $event.Properties[0].Value
-                    ServiceName = $event.Properties[2].Value
-                    ClientAddress = $event.Properties[6].Value
-                    FailureCode = $event.Properties[4].Value
-                    PreAuthenticationType = $event.Properties[5].Value
-                }
-            } elseif ($event.Id -eq '5152') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Windows Filtering Blocked a Packet"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    ProcessID = $event.Properties[0].Value
-                    ApplicationName = $event.Properties[1].Value
-                    SourceAddress = $event.Properties[3].Value
-                    SourcePort = $event.Properties[4].Value
-                    DestinationAddress = $event.Properties[5].Value
-                    DestinationPort = $event.Properties[6].Value
-                    Protocol = $event.Properties[7].Value
-                }
-            } elseif ($event.Id -eq '5154') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Listening Port Opened"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                }
-            } elseif ($event.Id -eq '5155') {
-                [PSCustomObject]@{
-                    Id = $event.Id
-                    LogName = $event.LogName
-                    Description = "Windows Filtering Platform Connection"
-                    TimeCreated = $event.TimeCreated
-                    MachineName = $event.MachineName
-                    RecordId = $event.RecordId
-                    ProcessID = $event.Properties[0].Value
-                    ApplicationName = $event.Properties[1].Value
-                    SourceAddress = $event.Properties[3].Value
-                    SourcePort = $event.Properties[4].Value
-                    DestinationAddress = $event.Properties[5].Value
-                    DestinationPort = $event.Properties[6].Value
-                    Protocol = $event.Properties[7].Value
-                    FilterInformation = $event.Properties[8].Value
-                    LayerName = $event.Properties[9].Value
-                }
-            } else {
-                Write-Warning "Unknown event ID: $($event.Id)"
-            }
-        }
     }
 }
 
-<# Example
 
-$BeginTime = (Get-Date).AddDays(-7)
-$EndTime = Get-Date
-
-
-$ComputerNames = 'COMPUTER1', 'COMPUTER2', 'COMPUTER3'  # Replace with actual computer names
-$Credential = Get-Credential
-
-$local_path = ($env:USERPROFILE + '\AppData\Local\Temp\XML\')
-
-Get-CriticalEventXML -EventList $EventList -BeginTime $BeginTime -EndTime $EndTime -ComputerName $ComputerNames -Credential $Credential
-
-# Merge XML files into a single file
-$allEvents = Get-ChildItem -Path $localPath -Filter "*-events.xml" | ForEach-Object {
-    Import-Clixml -Path $_.FullName
-}
-
-$allEvents | Enrich-Event
-
-#>
-
-# Function that exports event logs to an EVTX file and copies it back to your machine
-function Get-EVTX
-{
-
- [cmdletbinding()]
- Param
- (
-    [Parameter(ValueFromPipeline=$true,Mandatory=$true)]
-    [string[]]
-    $ComputerName,
-
-    [Parameter(Mandatory=$true)]
-    [pscredential]
-    $Credential,
-
-    [Parameter(Mandatory=$false)]
-    [string]
-    $LogName='Security',
-
-    [Parameter(Mandatory=$false)]
-    [string]
-    $StartDate = (Get-Date).AddDays(-2),
-
-    [Parameter(Mandatory=$false)]
-    [string]
-    $EndDate = (Get-Date),
-
-    [Parameter(Mandatory=$false)]
-    [string]
-    $LocalPath = "$env:USERPROFILE\Desktop\" + $LogName + ".evtx"
-
-)
-
-Begin
-{
-    If (!$Credential) {$Credential = Get-Credential}
-}
-
-Process
-{ 
-    $export_path = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {"$env:USERPROFILE\AppData\Local\Temp\$using:LogName" + "_Exported.evtx"}
-
-    Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
-
-    # create time frame
-    function GetMilliseconds ($date) {
-        $ts = New-TimeSpan -Start $date -End (Get-Date)
-        $ts.Ticks / 10000 # Divide by 10,000 to convert ticks to milliseconds
-        } 
-
-     $StartMilliseconds = GetMilliseconds $using:StartDate
-     $EndMilliseconds = GetMilliseconds $using:EndDate
-
-    # Event Log Query
-    $query = "*[System[TimeCreated[timediff(@SystemTime) >= $EndMilliseconds and timediff(@SystemTime) <= $StartMilliseconds]]]"
-
-    # Create the EventLogSession Object
-    $EventSession = New-Object System.Diagnostics.Eventing.Reader.EventLogSession
-
-     # Test if destination file already exists
-    if(Test-Path -Path $using:export_path)
-    {
-       return Write-Error -Message "File already exists"
-    }
-
-
-    # Export the log and messages
-    $EventSession.ExportLogAndMessages($using:LogName, [System.Diagnostics.Eventing.Reader.PathType]::LogName,$query, $using:export_path)
-
-
-}#End of Script Block
-
-
-# Create a session with the remote machine
-$session = New-PSSession -ComputerName $ComputerName -Credential $creds
-
-# Copy the file from the remote machine to your local machine
-Copy-Item -Path $export_path -Destination $LocalPath -FromSession $session
-
-# Remove event log from remote machine
-Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock { Remove-Item -Path $using:export_path }
-
-}#End of Process
-}
-
-<# Example
-Get-EVTX -ComputerName $ComputerName -Credential $Credential -LogName 'Security'
-#>
-
-function Index-Data {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$elasticURL,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$indexName,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$category,
-        
-        [Parameter(Mandatory=$true)]
-        [array]$dataArray
-    )
-
-    # Create the Elasticsearch document endpoint URL
-    $documentUrl = "$elasticURL/$indexName/_doc"
-
-    # Iterate over the data array
-    foreach ($dataItem in $dataArray) {
-        $data = @{
-            $category = $dataItem
-        }
-
-        # Convert the data to JSON
-        $jsonData = $data | ConvertTo-Json
-
-        # Ignore SSL certificate validation
-        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-        # Send the JSON data as the request body to create the document
-        Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json'
-    }
-}

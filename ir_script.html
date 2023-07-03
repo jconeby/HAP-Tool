@@ -118,6 +118,9 @@
         
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required><br><br>
+
+        <label for="password">Elastic URL:</label>
+        <input type="text" id="elasticURL" name="elasticURL" required><br><br>
         
         <input type="submit" value="Run Script" onclick="runScript(event)">
     </form>
@@ -172,8 +175,9 @@
         var hostname = document.getElementById("hostname").value;
         var username = document.getElementById("username").value;
         var password = document.getElementById("password").value;
+        var elasticURL = document.getElementById("elasticURL").value;
 
-        var params = "hostname=" + encodeURIComponent(hostname) + "&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password);
+        var params = "hostname=" + encodeURIComponent(hostname) + "&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password) + "&elasticURL=" + encodeURIComponent(elasticURL);
         xhr.send(params);
 
         event.preventDefault(); // Prevent the default form submission
