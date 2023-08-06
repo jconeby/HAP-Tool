@@ -1954,3 +1954,15 @@ function Split-StringWithComma {
         }
     }
 }
+
+function Remove-Spaces {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+        [String]$InputString
+    )
+
+    process {
+        $InputString -replace '\s', ''
+    }
+}

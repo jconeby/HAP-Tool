@@ -3,7 +3,7 @@ ini_set('max_execution_time', 7200); // Set to 7200 seconds (2 hours)
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $hostnames = $_POST["hostname"];
-    
+
     if (is_array($hostnames)) {
         $hostnameString = implode(",", $hostnames);
     } else {

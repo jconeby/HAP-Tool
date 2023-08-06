@@ -234,7 +234,9 @@
             }
         };
 
-        var hostname = document.getElementById("hostname").value.split(",");
+        var hostname = document.getElementById("hostname").value.split(",").map(function(item) {
+            return item.trim();  // trim whitespace from each hostname
+        });
         var username = document.getElementById("username").value;
         var password = document.getElementById("password").value;
         var elasticURL = document.getElementById("elasticURL").value;
