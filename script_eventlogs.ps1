@@ -35,6 +35,20 @@ Import-Module -Name .\functions.psm1
 # Convert value passed by php to an array in PowerShell
 $hostnames = Split-StringWithComma -InputString $hostnameString[0]
 
+# Array of hosts that accept WinRM requests
+$successfulHosts = @()
+
+foreach ($hostname in $hostnames) {
+    try {
+        # Attempting to connect and execute a simple command
+        Invoke-Command -ComputerName $hostname -Credential $Credential -ScriptBlock {
+        } -ErrorAction Stop
+        $successfulHosts += $hostname
+    } catch {
+        Write-Host "Error connecting to $hostname"
+    }
+}
+
 # EVENT LOGS
 $indexName = "hap-eventlogs"
 $documentUrl = "$elasticURL/$indexName/_doc"
@@ -46,7 +60,7 @@ $EndTime = (Get-Date)
 # Path where the files are stored on the web server
 $local_path = ($env:USERPROFILE + '\AppData\Local\Temp\XML\')
 
-Get-CriticalEventXML -BeginTime $BeginTime -EndTime $EndTime -ComputerName $hostnames -Credential $Credential
+Get-CriticalEventXML -BeginTime $BeginTime -EndTime $EndTime -ComputerName $successfulHosts -Credential $Credential
 
 $xmlFiles = Get-ChildItem -Path $local_path -Filter "*-events.xml"
 
