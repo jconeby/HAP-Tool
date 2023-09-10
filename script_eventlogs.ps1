@@ -19,7 +19,7 @@ param (
 
 )
 
-Import-Module -Name .\functions.psm1
+Import-Module -Name .\functions.psm1 -WarningAction SilentlyContinue
 
 # Create Credential Object for Windows creds
 [SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
@@ -74,11 +74,11 @@ $xmlFiles = Get-ChildItem -Path $local_path -Filter "*-events.xml"
                 }
                 $jsonData = $eventObj | ConvertTo-Json
                 # Send the JSON data as the request body to create the document
-                Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
+                Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials > $null
 
             } #End of inner loop
         } #End of outer loop
 
 
 # CREATE INDEX PATTERN FOR EVENT LOGS
-Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern 'hap-eventlogs*'
+Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern 'hap-eventlogs*' > $null
