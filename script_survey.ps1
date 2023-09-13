@@ -124,6 +124,18 @@ foreach ($category in $categories) {
     Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern $category.IndexName > $null
 }
 
+# Log that the script was ran on the crew_log index
+$logObject = [PSCustomObject]@{
+    "timestamp" = (Get-Date).ToUniversalTime().ToString("o")
+    "hostname"  = $env:COMPUTERNAME
+    "command"   = ("panacea tool ran on " + $hostnameString)
+}
+
+$logJson = $logObject | ConvertTo-Json
+$documentUrl = "$elasticsearchUrl/crew_log/_doc"
+[System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $logJson -ContentType 'application/json' -Credential $elasticCredentials
+
 # Create default index pattern
 Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern 'hap-*' > $null
 

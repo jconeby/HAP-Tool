@@ -79,6 +79,8 @@ $xmlFiles = Get-ChildItem -Path $local_path -Filter "*-events.xml"
             } #End of inner loop
         } #End of outer loop
 
+# Delete Event Log XML files from disk        
+Remove-Item -Path ($local_path + '*.xml')
 
 # CREATE INDEX PATTERN FOR EVENT LOGS
 Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern 'hap-eventlogs*' > $null
