@@ -80,7 +80,18 @@ $xmlFiles = Get-ChildItem -Path $local_path -Filter "*-events.xml"
         } #End of outer loop
 
 # Delete Event Log XML files from disk        
-Remove-Item -Path ($local_path + '*.xml')
+Remove-Item -Path ($local_path + '*.xml') > $null
+
+# Log that the script was ran on the crew_log index
+$logObject = [PSCustomObject]@{
+    "timestamp" = (Get-Date).ToUniversalTime().ToString("o")
+    "hostname"  = $env:COMPUTERNAME
+    "command"   = ("panacea tool event log script ran on " + $hostnameString)
+}
+
+$logJson = $logObject | ConvertTo-Json
+$documentUrl = "$elasticURL/crew_log/_doc"
+Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $logJson -ContentType 'application/json' -Credential $elasticCredentials > $null
 
 # CREATE INDEX PATTERN FOR EVENT LOGS
 Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern 'hap-eventlogs*' > $null

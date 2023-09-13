@@ -19,14 +19,14 @@ param (
 
 )
 
-Import-Module -Name .\functions.psm1 -WarningAction Silent
+Import-Module -Name .\functions.psm1 -WarningAction Silent > $null
 
 # Create Credential Object for Windows creds
 [SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
 [PSCredential]$Credential = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $secureString
 
 # Create Elasticsearch Credential Object
-[SecureString]$elasticSecureString = ConvertTo-SecureString -String $elasticPassword -AsPlainText -Force
+[SecureString]$elasticSecureString = ConvertTo-SecureString -String $elasticPassword -AsPlainText -Force 
 [PSCredential]$elasticCredentials = New-Object System.Management.Automation.PSCredential -ArgumentList $elasticUsername, $elasticSecureString
 
 # Ignore SSL certificate validation
@@ -128,13 +128,12 @@ foreach ($category in $categories) {
 $logObject = [PSCustomObject]@{
     "timestamp" = (Get-Date).ToUniversalTime().ToString("o")
     "hostname"  = $env:COMPUTERNAME
-    "command"   = ("panacea tool ran on " + $hostnameString)
+    "command"   = ("panacea tool script survey ran on " + $hostnameString)
 }
 
 $logJson = $logObject | ConvertTo-Json
-$documentUrl = "$elasticsearchUrl/crew_log/_doc"
-[System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $logJson -ContentType 'application/json' -Credential $elasticCredentials
+$documentUrl = "$elasticUrl/crew_log/_doc"
+Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $logJson -ContentType 'application/json' -Credential $elasticCredentials > $null
 
 # Create default index pattern
 Create-IndexPattern -elasticURL $elasticURL -Credential $elasticCredentials -indexPattern 'hap-*' > $null

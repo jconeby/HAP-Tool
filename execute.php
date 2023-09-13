@@ -27,7 +27,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Display the output
     // echo "<pre>$output</pre>";
     // Display the output
-    echo "<div style='border: 1px solid #e74c3c; background-color: #fdecea; padding: 10px 15px; margin: 10px 0; border-radius: 4px; color: #e74c3c; font-weight: bold;'><pre>$output</pre></div>";
+    // Display the output only if it's not empty or just spaces
+    if (trim($output)) {
+        echo "<div style='border: 1px solid #e74c3c; background-color: #fdecea; padding: 10px 15px; margin: 10px 0; border-radius: 4px; color: #e74c3c; font-weight: bold;'><pre>$output</pre></div>";
+    } 
     
 }
 ?>
