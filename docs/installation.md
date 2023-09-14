@@ -1,6 +1,6 @@
 # Installation Guide
 
-Setting up Panacea is a straightforward process. For a hassle-free and quick setup, we recommend using XAMPP. Below are the step-by-step instructions to get your tool up and running:
+Setting up the HAP tool is a straightforward process. For a hassle-free and quick setup, we recommend using XAMPP. Below are the step-by-step instructions to get your tool up and running:
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Setting up Panacea is a straightforward process. For a hassle-free and quick set
 
 ## Using XAMPP
 
-XAMPP provides an easy-to-install distribution containing Apache, MariaDB, PHP, and Perl. Here's how you can set up Panacea using XAMPP:
+XAMPP provides an easy-to-install distribution containing Apache, MariaDB, PHP, and Perl. Here's how you can set up HAP using XAMPP:
 
 ### 1. Download XAMPP
 
@@ -30,9 +30,9 @@ Move the tool's files into XAMPP's `htdocs` directory:
 - **Windows**: `C:\xampp\htdocs`
 
 ### 5. Create a Directory
-Create a directory called **panacea** in `C:\xampp\htdocs\`
+Create a directory called **hap** in `C:\xampp\htdocs\`
 
 ### 5. Access Panacea
-Open your browser and go to `http://localhost/panacea` to access the tool.
+Open your browser and go to `http://localhost/hap` to access the tool.
 
 You're now ready to use Panacea! If you encounter any issues during installation, please refer to our [FAQ](link_to_faq) or [open an issue on GitHub](link_to_issues).
