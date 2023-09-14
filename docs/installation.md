@@ -30,7 +30,7 @@ Move the tool's files into XAMPP's `htdocs` directory:
 - **Windows**: `C:\xampp\htdocs`
 
 ### 5. Create a Directory
-Create a directory called panacea in `C:\xampp\htdocs\`
+Create a directory called **panacea** in `C:\xampp\htdocs\`
 
 ### 5. Access Panacea
 Open your browser and go to `http://localhost/panacea` to access the tool.
