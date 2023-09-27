@@ -1965,3 +1965,493 @@ function Remove-Spaces {
         $InputString -replace '\s', ''
     }
 }
+
+#-----------------------------INVENTORY DOMAIN CONTROLLERS--------------------------------------------------
+function Get-DomainController {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+           $domainControllers = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+                $domainControllers = ([adsisearcher]'(&(objectCategory=computer)(primaryGroupID=516))').FindAll() | ForEach-Object { 
+                    $properties = $_.Properties
+                    [PSCustomObject]@{
+                        Name                  = $properties["name"] -as [string]
+                        DNShostname           = $properties["dnshostname"] -as [string]
+                        OperatingSystem       = $properties["operatingsystem"] -as [string]
+                        OperatingSystemVersion = $properties["operatingsystemversion"] -as [string]
+                        LastLogonTimestamp    = [datetime]::FromFileTime($properties["lastlogontimestamp"][0]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        DistinguishedName     = $properties["distinguishedname"] -as [string]
+                        Time                   = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        UTCTime                = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+                }
+
+                $domainControllers
+           }
+           $domainControllers
+    }
+}
+
+#-------------------------------PROTECTED GROUP MEMBERS--------------------------------------------------------------------
+function Get-ProtectedUsers {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+           $protected_users = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+
+                    $searcher = [adsisearcher]'(&(objectClass=user)(adminCount=1))'
+
+                    # Specify the properties you want to retrieve
+                    $searcher.PropertiesToLoad.AddRange(@('sAMAccountName', 'distinguishedName', 'logonCount', 'description', 'badPasswordTime', 'pwdLastSet', 'lastlogontimestamp', 'whenCreated', 'whenChanged', 'adminCount'))
+
+                    # Execute the search
+                    $results = $searcher.FindAll()
+
+                    $protected_users = @()
+
+                            # Loop through the results
+                            foreach ($result in $results) {
+                                $properties = $result.Properties
+                                $protected_users += [PSCustomObject]@{
+                                    Username           = $properties['samaccountname'] -as [string]
+                                    DistinguishedName  = $properties['distinguishedname'] -as [string]
+                                    LogonCount         = $properties['logoncount'] -as [string]
+                                    Description        = $properties['description'] -as [string]
+                                    BadPasswordTime    = [datetime]::FromFileTime($properties['badpasswordtime'][0] -as [long]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                    PwdLastSet         = [datetime]::FromFileTime($properties['pwdlastset'][0] -as [long]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                    LastLogonTimestamp = [datetime]::FromFileTime($properties['lastlogontimestamp'][0] -as [long]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                    WhenCreated        = $properties['whencreated'][0] -as [string]
+                                    WhenChanged        = $properties['whenchanged'][0] -as [string]
+                                    AdminCount         = $properties['admincount'][0] -as [string]
+                                    Time               = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                    UTCTime            = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                }
+                            }
+                    $protected_users
+                }
+            $protected_users
+    }
+}
+
+
+#-------------------AD USERS----------------------------------------------
+function Get-DomainUser {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+        $users = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+                $searcher = [adsisearcher]"(&(objectCategory=user)(objectClass=user))"
+
+                # Specify the properties to retrieve
+                $searcher.PropertiesToLoad.AddRange(@('samaccountname', 'name', 'instancetype', 'userprincipalname', 'logoncount',
+                'description', 'pwdlastset', 'badpwdcount', 'lastlogontimestamp', 'memberof', 'whencreated', 'adspath', 'cn', 'primarygroupid',
+                'distinguishedname', 'admincount'))
+
+                # Execute the search
+                $results = $searcher.FindAll()
+
+                # Define the number of days of inactivity
+                $daysInactive = 30
+
+                # Calculate the lastLogonTimestamp of the $daysInactive
+                $inactiveTime = (Get-Date).AddDays(-$daysInactive).ToFileTime()
+
+                $users = foreach ($result in $results) {
+                    $properties = $result.Properties
+                    
+                    $lastLogonTimestamp = if ($properties['lastlogontimestamp']) {
+                        [datetime]::FromFileTime([long]$properties['lastlogontimestamp'][0]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+
+                    $pwdLastSet = if ($properties['pwdlastset']) {
+                        [datetime]::FromFileTime([long]$properties['pwdlastset'][0])
+                    }
+
+                    [PSCustomObject]@{
+                        Username            = $properties['samaccountname'] -as [string]
+                        Name                = $properties['name'] -as [string]
+                        InstanceType        = $properties['instancetype'] -as [string]
+                        UserPrincipalName   = $properties['userprincipalname'] -as [string]
+                        LogonCount          = $properties['logoncount'] -as [string]
+                        Description         = $properties['description'] -as [string]
+                        PwdLastSet          = $pwdLastSet
+                        BadPwdCount         = $properties['badpwdcount'] -as [string]
+                        LastLogonTimestamp  = $lastLogonTimestamp
+                        MemberOf            = $properties['memberof'] -join '; '  # Convert string array to semicolon-separated string
+                        WhenCreated         = $properties['whencreated'] -as [string]
+                        ADsPath             = $properties['adspath'] -as [string]
+                        CN                  = $properties['cn'] -as [string]
+                        PrimaryGroupId      = $properties['primarygroupid'] -as [string]
+                        DistinguishedName   = $properties['distinguishedname'] -as [string]
+                        AdminCount          = $properties['admincount'] -as [string]
+                        Inactive            = if ($lastLogonTimestamp) { $lastLogonTimestamp -lt [datetime]::FromFileTime($inactiveTime) } else { $null }
+                        Time                = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        UTCTime             = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+                }
+                $users
+        }
+        $users
+    }
+    
+}
+
+#-------------------------AD GROUPS------------------------------------------
+function Get-DomainGroup {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+        $groups = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+                # Define the LDAP query string to find all groups
+                $searcher = [adsisearcher]"(objectCategory=group)"
+
+                # Specify the properties you want to retrieve
+                $searcher.PropertiesToLoad.AddRange(@('name', 'grouptype', 'memberof', 'member', 'samaccountname', 'distinguishedname'))
+
+                # Execute the search
+                $results = $searcher.FindAll()
+
+                # Loop through the results
+                foreach ($result in $results) {
+                    $properties = $result.Properties
+                    
+                    [PSCustomObject]@{
+                        GroupName         = $properties['name'] -as [string]
+                        GroupType         = $properties['grouptype'] -as [int]
+                        MemberOf          = $properties['memberof'] -as [string[]]
+                        Members           = $properties['member'] -as [string[]]
+                        SamAccountName    = $properties['samaccountname'] -as [string]
+                        DistinguishedName = $properties['distinguishedname'] -as [string]
+                        Time              = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        UTCTime           = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+                }
+            }
+        $groups
+    }
+}
+
+
+
+#----------------------------GROUP MEMBERSHIP-----------------------------------
+
+function Get-DomainGroupMembership {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+        $group_members = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+                # Define the LDAP query string to find all groups
+                $searcher = [adsisearcher]"(objectCategory=group)"
+
+                # Specify the properties you want to retrieve
+                $searcher.PropertiesToLoad.AddRange(@('name', 'member', 'distinguishedname'))
+
+                # Execute the search
+                $results = $searcher.FindAll()
+
+                # Loop through the results
+                $groups = @()
+                foreach ($result in $results) {
+                    $properties = $result.Properties
+                    
+                    $groupName = $properties['name'] -as [string]
+                    
+                    # Skip if GroupName is '0' or empty
+                    if ($groupName -eq '0' -or -not $groupName) { continue }
+                    
+                    $members = @()
+                    # If the group has members, resolve their distinguished names to more friendly Common Names (CN)
+                    if ($properties['member']) {
+                        foreach ($memberDN in $properties['member']) {
+                            $memberSearcher = [adsisearcher]"(distinguishedName=$memberDN)"
+                            $memberSearcher.PropertiesToLoad.Add('cn')
+                            $member = $memberSearcher.FindOne()
+                            if ($member) {
+                                $members += $member.Properties['cn'] -as [string]
+                            }
+                        }
+                    }
+                    
+                    $groups += [PSCustomObject]@{
+                        GroupName         = $groupName
+                        Members           = $members -join ', '
+                        DistinguishedName = $properties['distinguishedname'] -as [string]
+                        Time              = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        UTCTime           = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+                }
+                $groups
+        }
+        $group_members = $group_members | Where-Object { $_.GroupName -ne $null }
+        $group_members
+
+    }
+}
+
+
+#------------------------------SERVICE ACCOUNTS----------------------------
+function Get-ServiceAccount {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+
+        $service_accounts = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+                # Define the LDAP query string to find all users with a servicePrincipalName set
+                $searcher = [adsisearcher]"(&(objectCategory=user)(servicePrincipalName=*))"
+
+                # Specify the properties you want to retrieve
+                $searcher.PropertiesToLoad.AddRange(@('samaccountname', 'serviceprincipalname', 'distinguishedname', 'logoncount', 'description', 
+                'badpasswordtime', 'pwdlastset', 'whencreated', 'admincount'))
+
+                # Execute the search
+                $results = $searcher.FindAll()
+
+                # Loop through the results
+                $service_accounts = @()
+                foreach ($result in $results) {
+                    $properties = $result.Properties
+
+                    $service_accounts += [PSCustomObject]@{
+                        Username               = $properties['samaccountname'] -as [string]
+                        ServicePrincipalNames  = ($properties['serviceprincipalname'] -as [string[]]) -join ', '
+                        DistinguishedName      = $properties['distinguishedname'] -as [string]
+                        LogonCount             = $properties['logoncount'] -as [int]
+                        Description            = $properties['description'] -as [string]
+                        BadPasswordTime        = [datetime]::FromFileTime($properties['badpasswordtime'][0] -as [long]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        PwdLastSet             = [datetime]::FromFileTime($properties['pwdlastset'][0] -as [long]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        WhenCreated            = $properties['whencreated'] -as [datetime]
+                        AdminCount             = $properties['admincount'] -as [string]
+                        Time                   = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        UTCTime                = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+                }
+
+                $service_accounts
+        }
+
+        $service_accounts
+    }
+
+}
+
+
+#------------------------GROUP POLICY-----------------------------------------
+
+function Get-GPOInfo {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+
+        $gpos = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+
+                $searcher = [adsisearcher]"(objectClass=groupPolicyContainer)"
+                $searcher.PageSize = 1000 # Adjust as needed to handle large result sets
+                $results = $searcher.FindAll()
+
+                $gpos = @()
+
+                foreach ($result in $results) {
+                    $properties = $result.Properties
+                    $gpos += [PSCustomObject]@{
+                        Name              = $properties['displayname'][0]
+                        Id                = $properties['name'][0] # The unique identifier for the GPO
+                        DistinguishedName = $properties['distinguishedname'][0]
+                        WhenCreated       = ($properties['whencreated'][0]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        WhenChanged       = ($properties['whenchanged'][0]).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        Time              = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                        UTCTime           = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                    }
+                }
+
+                $gpos
+            
+            }
+
+        $gpos
+    }
+
+}
+
+
+
+
+#-----------------------EVENT LOGS-------------------------------------------
+
+function Get-ADEventLog {
+    [CmdletBinding()]
+    Param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]
+        $ComputerName,
+
+        [PSCredential]
+        $Credential
+    )
+
+    Begin {
+        If (!$Credential) {
+            $Credential = Get-Credential
+        }
+    }
+
+    Process {
+        $AD_events = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+
+            $eventArray = @(
+                [PSCustomObject]@{
+                    EventId = 216
+                    Description = 'A database location change was detected'
+                },
+                [PSCustomObject]@{
+                    EventId = 325
+                    Description = 'The database engine created a new database'
+                },
+                [PSCustomObject]@{
+                    EventId = 326
+                    Description = 'The database engine attached a database'
+                },
+                [PSCustomObject]@{
+                    EventId = 327
+                    Description = 'The database engine deteached a database'
+                }
+            )
+
+            $eventIds = @(216, 325, 326, 327)
+            $provider = 'ESENT'
+
+            # Using [adsisearcher] to get Domain Controllers
+            $searcher = [adsisearcher]'(&(objectClass=computer)(userAccountControl:1.2.840.113556.1.4.803:=8192))'
+            $domainControllers = $searcher.FindAll() | ForEach-Object { $_.Properties['dnshostname'][0] }
+
+            $results = @()
+            foreach ($hostname in $domainControllers) {
+                foreach ($id in $eventIds) {
+                    try {
+                        $events = Get-WinEvent -ComputerName $hostname -FilterHashtable @{
+                            LogName       = 'Application'
+                            ProviderName  = $provider
+                            Id            = $id
+                        } -ErrorAction Stop
+                        
+                        foreach ($event in $events) {
+                            $eventDescription = ($eventArray | Where-Object {$_.EventId -eq $event.Id}).Description
+                            $results += [PSCustomObject]@{
+                                DCName               = $hostname
+                                EventID              = $event.Id
+                                Description          = $eventDescription
+                                TimeCreated          = $event.TimeCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                ProviderName         = $event.ProviderName
+                                Message              = $event.Message
+                                Time                 = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                                UTCTime              = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                            }
+                        }
+                    }
+                    catch {
+                        #Write-Warning "Failed to query event $id from $hostname. Error: $_"
+                    }
+                }
+            }
+            return $results
+        }
+        $AD_events
+    }
+}

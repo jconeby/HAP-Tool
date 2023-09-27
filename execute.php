@@ -22,6 +22,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $output = shell_exec("powershell.exe -ExecutionPolicy Bypass -File script_survey.ps1 $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
     } elseif ($scriptType === "eventLogs") {
         $output = shell_exec("powershell.exe -ExecutionPolicy Bypass -File script_eventlogs.ps1 $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
+    } elseif ($scriptType === "activeDirectory") {
+        $output = shell_exec("powershell.exe -ExecutionPolicy Bypass -File script_active_directory.ps1 $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
     }
 
     // Display the output
