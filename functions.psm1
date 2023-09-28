@@ -1680,12 +1680,36 @@ function Enrich-Event {
                 $processID = [convert]::ToInt32($processIDHex, 16)
             }
 
+            # EventID to Description Mapping
+            $EventIdDescriptionMapping = @{
+            4624 = "An account was successfully logged on."
+            4634 = "An account was logged off."
+            4688 = "A new process has been created."
+            4698 = "A scheduled task was created."
+            4702 = "A scheduled task was updated."
+            4740 = "A user account was locked out."
+            4625 = "An account failed to log on."
+            5152 = "The Windows Filtering Platform blocked a packet."
+            5154 = "The Windows Filtering Platform has permitted an application or service to listen on a port for incoming connections."
+            5155 = "The Windows Filtering Platform has blocked an application or service from listening on a port for incoming connections."
+            5156 = "The Windows Filtering Platform has allowed a connection."
+            5157 = "The Windows Filtering Platform has blocked a connection."
+            4648 = "A logon was attempted using explicit credentials."
+            4672 = "Special privileges assigned to a new logon."
+            4673 = "A privileged service was called."
+            4769 = "A Kerberos service ticket was requested."
+            4771 = "Kerberos pre-authentication failed."
+            5140 = "A network share object was accessed."
+            1102 = "The audit log was cleared."
+        }
+
             # Create custom object with the extracted field values
             $eventData = [PSCustomObject]@{
                 CSName               = $event.MachineName
                 Id                   = $event.Id
                 TimeCreated          = $event.TimeCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
                 UTCTimeCreated       = $event.TimeCreated.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
+                Description          = $EventIdDescriptionMapping[$event.Id]
                 MachineName          = $event.MachineName
                 RecordId             = $event.RecordId
                 Time                 = (Get-Date).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'")
