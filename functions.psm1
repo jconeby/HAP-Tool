@@ -1542,6 +1542,10 @@ function Get-CriticalEventXML
                         [PSCustomObject]@{
                             Event_Log = 'Security'
                             ID = 5140
+                        },
+                        [PSCustomObject]@{
+                            Event_Log = 'Security'
+                            ID = 1102
                         }
                     )
 
