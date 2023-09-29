@@ -54,8 +54,8 @@ $indexName = "hap-eventlogs"
 $documentUrl = "$elasticURL/$indexName/_doc"
 
 # Capture the last 1 days of events
-$BeginTime = (Get-Date).AddDays(-1)
-$EndTime = (Get-Date)
+$BeginTime = (Get-Date).AddDays(-30)
+$EndTime = (Get-Date).AddDays(1)
 
 # Path where the files are stored on the web server
 $local_path = ($env:USERPROFILE + '\AppData\Local\Temp\XML\')

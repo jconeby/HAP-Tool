@@ -1,4 +1,4 @@
-﻿# Processes
+﻿#----------------------------- PROCESSES-------------------------------
 function Get-WmiProcess {
     [CmdletBinding()]
     Param (
@@ -78,61 +78,7 @@ function Get-WmiProcess {
 }
 
 
-<# Example
-
-# Change creds as needed
-$username = 'Administrator'
-$password = 'P@55w0rd!'
-
-# Create Credential Object
-[SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
-[PSCredential]$creds = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $secureString
-
-$Processes = (Get-WmiProcess -ComputerName "10.136.36.54" -Credential $creds)
-
-
-# Elasticsearch server URL
-$elasticsearchUrl = "https://10.109.35.100:9200"
-
-# Index name
-$indexName = "hap-processes"
-
-# Create the Elasticsearch document endpoint URL
-$documentUrl = "$elasticsearchUrl/$indexName/_doc"
-
-# Elasticsearch credentials
-$elasticUsername = 'elastic'
-$elasticPassword = 'Fy590f0TI7Wg7L0MO4Og44gd' # Password is on the TFPlenum home page
-
-# Create Elasticsearch Credential Object
-[SecureString]$elasticSecureString = ConvertTo-SecureString -String $elasticPassword -AsPlainText -Force
-[PSCredential]$elasticCredentials = New-Object System.Management.Automation.PSCredential -ArgumentList $elasticUsername, $elasticSecureString
-
-
-<# This code will loop through each PowerShell object in the array 
-and send a document to the Elastic API #>
-
-<#
-foreach ($process in $Processes)
-{
-    $process = @{
-    "processes" = $process
-    }
-
-    # Convert the $Processes to JSON
-    $jsonData = $process | ConvertTo-Json
-
-    # Ignore SSL certificate validation
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-    # Send the JSON data as the request body to create the document
-    Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
-
-}
-
-#>
-
-# Services
+#------------------------------------- SERVICES---------------------------------------------------
 function Get-ServiceInfo
 {
     [cmdletbinding()]
@@ -179,57 +125,8 @@ function Get-ServiceInfo
     }
 } 
 
-<# Example
 
-# Change creds as needed
-$username = 'Administrator'
-$password = 'P@55w0rd!'
-
-# Create Credential Object
-[SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
-[PSCredential]$creds = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $secureString
-
-$Services = (Get-ServiceInfo -ComputerName "10.136.36.54" -Credential $creds)
-
-# Elasticsearch server URL
-$elasticsearchUrl = "https://10.109.35.100:9200"
-
-# Index name
-$indexName = "hap-services"
-
-# Create the Elasticsearch document endpoint URL
-$documentUrl = "$elasticsearchUrl/$indexName/_doc"
-
-# Elasticsearch credentials
-$elasticUsername = 'elastic'
-$elasticPassword = 'Fy590f0TI7Wg7L0MO4Og44gd' # Password is on the TFPlenum home page
-
-# Create Elasticsearch Credential Object
-[SecureString]$elasticSecureString = ConvertTo-SecureString -String $elasticPassword -AsPlainText -Force
-[PSCredential]$elasticCredentials = New-Object System.Management.Automation.PSCredential -ArgumentList $elasticUsername, $elasticSecureString
-
-# Loop through each PowerShell object in the array and send a document to the Elastic API
-foreach ($service in $Services)
-{
-    $serviceData = @{
-        "services" = $service
-    }
-
-    # Convert the $serviceData to JSON
-    $jsonData = $serviceData | ConvertTo-Json
-
-    # Ignore SSL certificate validation
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-    # Send the JSON data as the request body to create the document
-    Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
-}
-
-
-#>
-
-
-# Connections
+#------------------------------------------- CONNECTIONS-------------------------------------------------
 function Get-Connection {
     [CmdletBinding()]
     Param (
@@ -281,54 +178,6 @@ function Get-Connection {
     }
 }
 
-<# Example
-
-# Change creds as needed
-$username = 'Administrator'
-$password = 'P@55w0rd!'
-
-# Create Credential Object
-[SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
-[PSCredential]$creds = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $secureString
-
-$Connections = (Get-Connection -ComputerName "10.136.36.54" -Credential $creds)
-
-# Elasticsearch server URL
-$elasticsearchUrl = "https://10.109.35.100:9200"
-
-# Index name
-$indexName = "hap-connections"
-
-# Create the Elasticsearch document endpoint URL
-$documentUrl = "$elasticsearchUrl/$indexName/_doc"
-
-# Elasticsearch credentials
-$elasticUsername = 'elastic'
-$elasticPassword = 'Fy590f0TI7Wg7L0MO4Og44gd' # Password is on the TFPlenum home page
-
-# Create Elasticsearch Credential Object
-[SecureString]$elasticSecureString = ConvertTo-SecureString -String $elasticPassword -AsPlainText -Force
-[PSCredential]$elasticCredentials = New-Object System.Management.Automation.PSCredential -ArgumentList $elasticUsername, $elasticSecureString
-
-# This code will loop through each PowerShell object in the array
-# and send a document to the Elastic API
-
-foreach ($connection in $Connections) {
-    $connectionData = @{
-        "connections" = $connection
-    }
-
-    # Convert the $Connections to JSON
-    $jsonData = $connectionData | ConvertTo-Json
-
-    # Ignore SSL certificate validation
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-    # Send the JSON data as the request body to create the document
-    Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
-}
-#>
-
 
 # Scheduled Tasks
 function Get-SchTask
@@ -379,54 +228,6 @@ function Get-SchTask
         $tasks
     }    
 }
-
-<# Example
-
-$username = 'Administrator'
-$password = 'P@55w0rd!'
-
-# Create Credential Object
-[SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
-[PSCredential]$creds = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $secureString
-
-$Tasks = (Get-SchTask -ComputerName "10.136.36.54" -Credential $creds)
-
-# Elasticsearch server URL
-$elasticsearchUrl = "https://10.109.35.100:9200"
-
-# Index name
-$indexName = "hap-tasks"
-
-# Create the Elasticsearch document endpoint URL
-$documentUrl = "$elasticsearchUrl/$indexName/_doc"
-
-# Elasticsearch credentials
-$elasticUsername = 'elastic'
-$elasticPassword = 'Fy590f0TI7Wg7L0MO4Og44gd' # Password is on the TFPlenum home page
-
-# Create Elasticsearch Credential Object
-[SecureString]$elasticSecureString = ConvertTo-SecureString -String $elasticPassword -AsPlainText -Force
-[PSCredential]$elasticCredentials = New-Object System.Management.Automation.PSCredential -ArgumentList $elasticUsername, $elasticSecureString
-
-# This code will loop through each PowerShell object in the array
-# and send a document to the Elastic API
-
-foreach ($task in $Tasks) {
-    $taskData = @{
-        "tasks" = $task
-    }
-
-    # Convert the $Tasks to JSON
-    $jsonData = $taskData | ConvertTo-Json
-
-    # Ignore SSL certificate validation
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-    # Send the JSON data as the request body to create the document
-    Invoke-RestMethod -Method 'POST' -Uri $documentUrl -Body $jsonData -ContentType 'application/json' -Credential $elasticCredentials
-}
-
-#>
 
 
 # Prefetch
@@ -1653,6 +1454,8 @@ function Enrich-Event {
             $sourceNetworkAddressPattern = "Source Network Address:\s+(.+)"
             $sourcePortPattern = "Source Port:\s+(.+)"
             $logonProcessPattern = "Logon Process:\s+(.+)"
+            $parentProcessPattern = "Creator Process Name:\s+(.+)"
+            $parentProcessIDPattern = "Creator Process ID:\s+0x([A-Fa-f0-9]+)\b"
 
             # Extract field values using regular expressions
             $accountName = [regex]::Match($eventMessage, $accountNamePattern).Groups[1].Value
@@ -1662,11 +1465,15 @@ function Enrich-Event {
             $logonType = [regex]::Match($eventMessage, $logonTypePattern).Groups[1].Value
             $processIDHexMatch = [regex]::Match($eventMessage, $processIDPattern)
             $processIDHex = $processIDHexMatch.Groups[1].Value
-            $processName = [regex]::Match($eventMessage, $processNamePattern).Groups[1].Value
+            $processPath = [regex]::Match($eventMessage, $processNamePattern).Groups[1].Value
             $workstationName = [regex]::Match($eventMessage, $workstationNamePattern).Groups[1].Value
             $sourceNetworkAddress = [regex]::Match($eventMessage, $sourceNetworkAddressPattern).Groups[1].Value
             $sourcePort = [regex]::Match($eventMessage, $sourcePortPattern).Groups[1].Value
             $logonProcess = [regex]::Match($eventMessage, $logonProcessPattern).Groups[1].Value
+            $parentProcessPath = [regex]::Match($eventMessage, $parentProcessPattern).Groups[1].Value
+            $parentProcessIDHexMatch = [regex]::Match($eventMessage, $parentProcessIDPattern)
+            $parentProcessIDHex = $parentProcessIDHexMatch.Groups[1].Value
+
 
             # Convert LogonID from hexadecimal to decimal
             $logonID = 0
@@ -1678,6 +1485,12 @@ function Enrich-Event {
             $processID = 0
             if ($processIDHexMatch.Success) {
                 $processID = [convert]::ToInt32($processIDHex, 16)
+            }
+
+            # Convert ParentProcessID from hexadecimal to decimal
+            $parentProcessID = 0
+            if ($parentProcessIDHexMatch.Success) {
+                $parentProcessID = [convert]::ToInt32($parentProcessIDHex, 16)
             }
 
             # EventID to Description Mapping
@@ -1719,7 +1532,11 @@ function Enrich-Event {
                 LogonID              = $logonID
                 LogonType            = $logonType
                 ProcessID            = $processID
-                ProcessName          = $processName
+                ProcessName          = if($ProcessPath) {Split-Path $ProcessPath -Leaf} else {$null}
+                ProcessPath          = $processPath
+                ParentProcessID      = $parentProcessID
+                ParentProcessName    = if($ParentProcessPath) {Split-Path $ParentProcessPath -Leaf} else {$null}
+                ParentProcessPath    = $parentProcessPath
                 WorkstationName      = $workstationName
                 SourceNetworkAddress = $sourceNetworkAddress
                 SourcePort           = $sourcePort
