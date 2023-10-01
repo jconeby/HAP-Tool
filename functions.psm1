@@ -1347,6 +1347,10 @@ function Get-CriticalEventXML
                         [PSCustomObject]@{
                             Event_Log = 'Security'
                             ID = 1102
+                        },
+                        [PSCustomObject]@{
+                            Event_Log = 'Microsoft-Windows-PowerShell/Operational'
+                            ID = 4104
                         }
                     )
 
@@ -1479,7 +1483,7 @@ function Enrich-Event {
             $logonID = 0
             if ($logonIDHexMatch.Success) {
                 $logonID = [bigint]::Parse($logonIDHex.Substring(2), 'HexNumber')
-            }
+            } else {$logonID = [PSCustomObject]@{logonID = $null}}
 
             # Convert ProcessID from hexadecimal to decimal
             $processID = 0
@@ -1514,6 +1518,7 @@ function Enrich-Event {
             4771 = "Kerberos pre-authentication failed."
             5140 = "A network share object was accessed."
             1102 = "The audit log was cleared."
+            4104 = "PowerShell Remote Command Execution"
         }
 
             # Create custom object with the extracted field values
@@ -1523,6 +1528,7 @@ function Enrich-Event {
                 TimeCreated          = $event.TimeCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
                 UTCTimeCreated       = $event.TimeCreated.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffffffK')
                 Description          = $EventIdDescriptionMapping[$event.Id]
+                LogName              = $event.LogName
                 MachineName          = $event.MachineName
                 RecordId             = $event.RecordId
                 Time                 = (Get-Date).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'")
