@@ -480,3 +480,69 @@ def get_services_and_insert(hostname, username, password, es_url, es_user, es_pa
         helpers.bulk(es, actions)
     except es_exceptions.ElasticsearchException as e:
         print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+
+
+def get_cron_jobs_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
+    # Establishing Elasticsearch Connection
+    es = Elasticsearch(
+        [es_url],
+        basic_auth=(es_user, es_pass),
+        verify_certs=False,
+    )
+
+    # List to hold the cron job information.
+    cron_jobs_info = []
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            stdin, stdout, stderr = client.exec_command('cat /etc/crontab')
+            for line in stdout.read().decode('utf-8').splitlines():
+                if line and not line.startswith("#"):  # Skip comments and empty lines
+                    fields = line.split()
+                    if len(fields) >= 7:  # Ensure there are enough fields before accessing them
+                        cron_job = {
+                            "m": fields[0],
+                            "h": fields[1],
+                            "dom": fields[2],
+                            "mon": fields[3],
+                            "dow": fields[4],
+                            "user": fields[5],
+                            "command": ' '.join(fields[6:]),
+                            "croninfo": line  # Added croninfo
+                        }
+                        cron_jobs_info.append(cron_job)
+                    else:
+                        print(f"Skipping malformed line: {line}")
+
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
+    # Prepare Elasticsearch actions and perform bulk insert.
+    actions = [
+        {
+            "_index": es_index, 
+            "_source": {
+                "hostname": hostname, 
+                **cron_job,
+                "timestamp": timestamp  
+            }
+        } 
+        for cron_job in cron_jobs_info  # Modified to accommodate croninfo
+    ]
+
+    try:
+        helpers.bulk(es, actions)
+    except es_exceptions.ElasticsearchException as e:
+        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
