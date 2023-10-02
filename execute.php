@@ -24,6 +24,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $output = shell_exec("powershell.exe -ExecutionPolicy Bypass -File script_eventlogs.ps1 $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
     } elseif ($scriptType === "activeDirectory") {
         $output = shell_exec("powershell.exe -ExecutionPolicy Bypass -File script_active_directory.ps1 $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
+    } elseif ($scriptType === "linuxSurvey") {
+        $command = escapeshellcmd("python linux_survey.py $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
+        $output = shell_exec($command);
     }
 
     // Display the output
