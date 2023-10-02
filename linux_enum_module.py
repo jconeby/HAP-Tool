@@ -231,11 +231,7 @@ def get_shadow_and_insert(hostname, username, password, es_url, es_user, es_pass
     except es_exceptions.ElasticsearchException as e:
         print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
 
-
-from datetime import datetime
-import paramiko
-from elasticsearch import Elasticsearch, helpers, exceptions as es_exceptions
-
+# Lastlog info -- see the users that have logged in recently
 
 def get_lastlog_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
     # Establishing Elasticsearch Connection
@@ -296,6 +292,188 @@ def get_lastlog_and_insert(hostname, username, password, es_url, es_user, es_pas
             }
         } 
         for lastlog in lastlog_info
+    ]
+    
+    try:
+        helpers.bulk(es, actions)
+    except es_exceptions.ElasticsearchException as e:
+        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+
+# This function is to identify any odd SSH & Telent logins
+
+def get_auth_logs_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
+    # Establishing Elasticsearch Connection
+    es = Elasticsearch(
+        [es_url],
+        basic_auth=(es_user, es_pass),
+        verify_certs=False,
+    )
+    
+    # List to hold the log information.
+    logs_info = []
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            command = "grep -E 'ssh|telnet' /var/log/auth.log"
+            stdin, stdout, stderr = client.exec_command(command)
+            for line in stdout.read().decode('utf-8').splitlines():
+                logs_info.append({"loginfo": line})  # Added loginfo
+                
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
+    # Prepare Elasticsearch actions and perform bulk insert.
+    actions = [
+        {
+            "_index": es_index, 
+            "_source": {
+                "hostname": hostname, 
+                "loginfo": log_info["loginfo"],  # Added loginfo
+                "timestamp": timestamp  
+            }
+        } 
+        for log_info in logs_info  # Modified to accommodate loginfo
+    ]
+    
+    try:
+        helpers.bulk(es, actions)
+    except es_exceptions.ElasticsearchException as e:
+        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+
+# BASH HISTORY
+
+def get_user_history_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
+    # Establishing Elasticsearch Connection
+    es = Elasticsearch(
+        [es_url],
+        http_auth=(es_user, es_pass),
+        verify_certs=False,
+    )
+    
+    # List to hold the history information.
+    history_info = []
+    
+    # Bash command to retrieve history for every user
+    command = """
+    for user_home in /home/*; do
+      user=$(basename "$user_home")
+      sudo -S cat "$user_home/.bash_history" 2>/dev/null | while read -r cmd; do
+        echo "User: $user, Command: $cmd"
+      done
+    done
+    """
+    
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            stdin, stdout, stderr = client.exec_command(command)
+            stdin.write(password + '\n')  # Sending the sudo password
+            stdin.flush()
+
+            for line in stdout.read().decode('utf-8').splitlines():
+                # Extracting user and command from the line
+                user, cmd = line.replace('User: ', '').split(', Command: ', 1)
+                history_info.append({"user": user.strip(), "command": cmd.strip(), "history_info": line.strip()})
+                
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
+    # Prepare Elasticsearch actions and perform bulk insert.
+    actions = [
+        {
+            "_index": es_index,
+            "_source": {
+                "hostname": hostname,
+                "user": info["user"],
+                "command": info["command"],
+                "history_info": info["history_info"],
+                "timestamp": timestamp
+            }
+        }
+        for info in history_info
+    ]
+
+    try:
+        helpers.bulk(es, actions)
+    except es_exceptions.ElasticsearchException as e:
+        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+
+
+# SERVICES
+
+def get_services_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
+    # Establishing Elasticsearch Connection
+    es = Elasticsearch(
+        [es_url],
+        basic_auth=(es_user, es_pass),
+        verify_certs=False,
+    )
+    
+    # List to hold the service information.
+    services_info = []
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            stdin, stdout, stderr = client.exec_command('service --status-all')
+            for line in stdout.read().decode('utf-8').splitlines():
+                # Parsing service status and name
+                status_symbol = line[4]  # Extracts the '+' or '-' character from the line
+                status = "running" if status_symbol == '+' else "stopped"
+                service = line[8:].strip()  # Extracts the service name from the line
+                services_info.append({"service": service, "status": status, "serviceinfo": line.strip()})
+                
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
+    # Prepare Elasticsearch actions and perform bulk insert.
+    actions = [
+        {
+            "_index": es_index,
+            "_source": {
+                "hostname": hostname,
+                "service": service_info["service"],
+                "status": service_info["status"],
+                "serviceinfo": service_info["serviceinfo"],
+                "timestamp": timestamp
+            }
+        }
+        for service_info in services_info
     ]
     
     try:
