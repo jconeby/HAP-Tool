@@ -1,6 +1,4 @@
 import sys
-from elasticsearch import Elasticsearch, helpers, exceptions as es_exceptions
-import paramiko
 import linux_enum_module as lem
 
 if len(sys.argv) < 6:
@@ -30,3 +28,19 @@ for hostname in hostnames.split(','):
     lem.get_hosts_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-hosts')
     lem.get_connections_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-connections')
     lem.get_lastb_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-lastb')
+    lem.get_meminfo_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-memory')
+    lem.get_internet_connections_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-internet-connections')
+    lem.get_unix_sockets_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-unix-sockets')
+
+
+# List of all index patterns used by the script
+index_patterns = [
+    'hap-linux-users', 'hap-linux-groups', 'hap-linux-processes', 'hap-linux-shadow',
+    'hap-linux-lastlog', 'hap-linux-authlog', 'hap-linux-history', 'hap-linux-services',
+    'hap-linux-cronjobs', 'hap-linux-hosts', 'hap-linux-connections', 'hap-linux-lastb',
+    'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets'
+]
+
+# Ensure all index patterns exist and if not create them
+for index_pattern in index_patterns:
+    lem.create_index_pattern(es_url, es_user, es_pass, index_pattern)
