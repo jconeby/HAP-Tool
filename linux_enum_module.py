@@ -689,3 +689,79 @@ def get_connections_and_insert(hostname, username, password, es_url, es_user, es
         helpers.bulk(es, actions)
     except es_exceptions.ElasticsearchException as e:
         print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+
+# FAILED LOGINS - lastb command
+
+def get_lastb_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
+    # Establishing Elasticsearch Connection
+    es = Elasticsearch(
+        [es_url],
+        http_auth=(es_user, es_pass),
+        verify_certs=False,
+    )
+
+    # List to hold the lastb information.
+    lastb_info_list = []
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+
+            # Execute command and process output.
+            command = 'sudo -S lastb'  # -S option makes sudo read password from stdin
+            stdin, stdout, stderr = client.exec_command(command)
+            stdin.write(password + '\n')  # Sending the sudo password
+            stdin.flush()
+
+            for line in stdout.read().decode('utf-8').splitlines():
+                # Skip empty or unwanted lines
+                if not line.strip() or 'btmp begins' in line:
+                    continue
+
+                # Parsing the data as needed
+                fields = line.split()
+                if len(fields) < 10:
+                    print(f"Skipping malformed line: {line}")
+                    continue
+
+                user = fields[0]
+                terminal = fields[1]
+                ip_address = fields[2]
+                # Concatenating fields to capture the entire time information
+                time_info = " ".join(fields[3:7])
+                lastb_info_list.append({
+                    "user": user,
+                    "terminal": terminal,
+                    "ip_address": ip_address,
+                    "time": time_info,
+                })
+
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
+    # Prepare Elasticsearch actions and perform bulk insert.
+    actions = [
+        {
+            "_index": es_index,
+            "_source": {
+                "hostname": hostname,
+                "timestamp": timestamp,
+                **lastb_info
+            }
+        }
+        for lastb_info in lastb_info_list
+    ]
+
+    try:
+        helpers.bulk(es, actions)
+    except es_exceptions.ElasticsearchException as e:
+        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
