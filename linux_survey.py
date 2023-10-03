@@ -27,3 +27,5 @@ for hostname in hostnames.split(','):
     lem.get_user_history_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-history')
     lem.get_services_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-services')
     lem.get_cron_jobs_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-cronjobs')
+    lem.get_hosts_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-hosts')
+    lem.get_connections_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-connections')
