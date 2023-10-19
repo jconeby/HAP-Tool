@@ -1,129 +1,45 @@
 from datetime import datetime
 import paramiko
-from elasticsearch import Elasticsearch, helpers, exceptions as es_exceptions
-import re
-import requests  # Importing requests to make API calls.
+import requests
 import json
+import base64
+import re
 
-# LOCAL USERS
-def get_users_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+# SEND DATA TO ELASTIC
+
+def send_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
+    # pass base64 credentials in the header
+    credentials = base64.b64encode(f"{es_user}:{es_pass}".encode()).decode()
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic {credentials}"
+    }
     
-    # List to hold the user information.
-    users_info = []
-    try:
-        # SSH Client setup and connect.
-        with paramiko.SSHClient() as client:
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(hostname, username=username, password=password)
-            
-            # Execute command and process output.
-            stdin, stdout, stderr = client.exec_command('cat /etc/passwd')
-            for line in stdout.read().decode('utf-8').splitlines():
-                user = line.split(":")[0]
-                users_info.append({"user": user, "userinfo": line})  # Added userinfo
-                
-    except paramiko.AuthenticationException:
-        print(f"Authentication failed for {hostname} using username {username}")
-    except paramiko.SSHException as e:
-        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
-    except Exception as e:
-        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
-
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                "user": user_info["user"], 
-                "userinfo": user_info["userinfo"],  # Added userinfo
-                "timestamp": timestamp  
-            }
-        } 
-        for user_info in users_info  # Modified to accommodate userinfo
-    ]
+    # Bulk indexing URL for Elasticsearch
+    bulk_url = f"{es_url}/{index_name}/_bulk"
     
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
-
-# LOCAL GROUPS
-
-def get_groups_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+    bulk_data = ""
+    for item in data:
+        # The action and metadata line
+        bulk_data += json.dumps({"index": {}}) + "\n"
+        # The actual data
+        bulk_data += json.dumps(item) + "\n"
     
-    # List to hold the group information.
-    groups_info = []
-    try:
-        # SSH Client setup and connect.
-        with paramiko.SSHClient() as client:
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(hostname, username=username, password=password)
-            
-            # Execute command and process output.
-            stdin, stdout, stderr = client.exec_command('cat /etc/group')
-            for line in stdout.read().decode('utf-8').splitlines():
-                group = line.split(":")[0]  # Extracting group name
-                groups_info.append({"group": group, "groupinfo": line})  # Added groupinfo
-                
-    except paramiko.AuthenticationException:
-        print(f"Authentication failed for {hostname} using username {username}")
-    except paramiko.SSHException as e:
-        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
-    except Exception as e:
-        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
-
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                "group": group_info["group"],  # Use group from group_info
-                "groupinfo": group_info["groupinfo"],  # Added groupinfo
-                "timestamp": timestamp  
-            }
-        } 
-        for group_info in groups_info  # Modified to accommodate groupinfo
-    ]
+    response = requests.post(bulk_url, headers=headers, data=bulk_data, verify=False)
     
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    if response.status_code != 200:
+        print(f"Failed to insert data into Elasticsearch. Response: {response.text}")
+
 
 # PROCESSES
 
-def get_processes_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
-
-    # List to hold the process information.
+def get_running_processes(hostname, username, password):
     processes_info = []
+    
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -135,10 +51,13 @@ def get_processes_and_insert(hostname, username, password, es_url, es_user, es_p
             stdin, stdout, stderr = client.exec_command('ps -auxww')
             # Skipping the header line of the output
             lines = stdout.read().decode('utf-8').splitlines()[1:]
+            
             for line in lines:
                 # Splitting by whitespace to extract fields
                 fields = line.split(None, 10)
                 processes_info.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
                     "USER": fields[0],
                     "PID": fields[1],
                     "%CPU": fields[2],
@@ -158,41 +77,93 @@ def get_processes_and_insert(hostname, username, password, es_url, es_user, es_p
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+    
+    return processes_info
 
+
+# LOCAL USERS
+
+def get_users(hostname, username, password):
+    # List to hold the user information.
+    users_info = []
+    
     # Get the current UTC time in ISO 8601 format
     timestamp = datetime.utcnow().isoformat()
 
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                "process_info": process_info,  # Added process_info
-                "timestamp": timestamp  
-            }
-        } 
-        for process_info in processes_info
-    ]
-    
     try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
-
-
-# /etc/shadow CONTENTS
-
-def get_shadow_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            stdin, stdout, stderr = client.exec_command('cat /etc/passwd')
+            for line in stdout.read().decode('utf-8').splitlines():
+                user = line.split(":")[0]
+                users_info.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
+                    "user": user, 
+                    "userinfo": line
+                })
+                
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
     
+    return users_info
+
+
+# LOCAL GROUPS
+
+def get_groups(hostname, username, password):
+    # List to hold the group information.
+    groups_info = []
+    
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            stdin, stdout, stderr = client.exec_command('cat /etc/group')
+            for line in stdout.read().decode('utf-8').splitlines():
+                group = line.split(":")[0]  # Extracting group name
+                groups_info.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
+                    "group": group,
+                    "groupinfo": line
+                })
+                
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+    
+    return groups_info
+
+
+# /etc/shadow Contents
+
+def get_shadow(hostname, username, password):
     # List to hold the shadow information.
     shadow_info_list = []
+    
+    # Get the current UTC time in ISO 8601 format
+    timestamp = datetime.utcnow().isoformat()
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -208,7 +179,12 @@ def get_shadow_and_insert(hostname, username, password, es_url, es_user, es_pass
 
             for line in stdout.read().decode('utf-8').splitlines():
                 user, shadow_info = line.split(":", 1)  # Splitting by the first colon
-                shadow_info_list.append({"user": user, "shadow_info": line})
+                shadow_info_list.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
+                    "user": user,
+                    "shadow_info": line
+                })
                 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -216,41 +192,21 @@ def get_shadow_and_insert(hostname, username, password, es_url, es_user, es_pass
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+    
+    return shadow_info_list
 
+# LASTLOG
+
+import paramiko
+from datetime import datetime
+
+def get_lastlog(hostname, username, password):
+    # List to hold the lastlog information.
+    lastlog_info = []
+    
     # Get the current UTC time in ISO 8601 format
     timestamp = datetime.utcnow().isoformat()
 
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                "user": shadow_info["user"], 
-                "shadow_info": shadow_info["shadow_info"],
-                "timestamp": timestamp  
-            }
-        } 
-        for shadow_info in shadow_info_list
-    ]
-    
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
-
-# Lastlog info -- see the users that have logged in recently
-
-def get_lastlog_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
-
-    # List to hold the lastlog information.
-    lastlog_info = []
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -273,6 +229,8 @@ def get_lastlog_and_insert(hostname, username, password, es_url, es_user, es_pas
                     latest = "Never"
 
                 lastlog_info.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
                     "Username": username,
                     "Port": port,
                     "From": from_,
@@ -285,40 +243,17 @@ def get_lastlog_and_insert(hostname, username, password, es_url, es_user, es_pas
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
-
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                "lastlog_info": lastlog,  # Added lastlog_info
-                "timestamp": timestamp  
-            }
-        } 
-        for lastlog in lastlog_info
-    ]
     
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    return lastlog_info
 
-# This function is to identify any odd SSH & Telent logins
 
-def get_auth_logs_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+# AUTH LOGS - This function is to identify any odd SSH & Telent logins
+
+def get_auth_logs(hostname, username, password):
     
     # List to hold the log information.
     logs_info = []
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -329,8 +264,13 @@ def get_auth_logs_and_insert(hostname, username, password, es_url, es_user, es_p
             # Execute command and process output.
             command = "grep -E 'ssh|telnet' /var/log/auth.log"
             stdin, stdout, stderr = client.exec_command(command)
+
             for line in stdout.read().decode('utf-8').splitlines():
-                logs_info.append({"loginfo": line})  # Added loginfo
+                logs_info.append({
+                    "hostname": hostname,
+                    "loginfo": line,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
                 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -339,36 +279,13 @@ def get_auth_logs_and_insert(hostname, username, password, es_url, es_user, es_p
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
+    return logs_info
 
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                "loginfo": log_info["loginfo"],  # Added loginfo
-                "timestamp": timestamp  
-            }
-        } 
-        for log_info in logs_info  # Modified to accommodate loginfo
-    ]
-    
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
 
 # BASH HISTORY
 
-def get_user_history_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+def get_user_history(hostname, username, password):
+    """ Fetches the bash history for all users on the given host. """
     
     # List to hold the history information.
     history_info = []
@@ -398,7 +315,13 @@ def get_user_history_and_insert(hostname, username, password, es_url, es_user, e
             for line in stdout.read().decode('utf-8').splitlines():
                 # Extracting user and command from the line
                 user, cmd = line.replace('User: ', '').split(', Command: ', 1)
-                history_info.append({"user": user.strip(), "command": cmd.strip(), "history_info": line.strip()})
+                history_info.append({
+                    "hostname": hostname,
+                    "user": user.strip(),
+                    "command": cmd.strip(),
+                    "history_info": line.strip(),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
                 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -406,43 +329,16 @@ def get_user_history_and_insert(hostname, username, password, es_url, es_user, e
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
-
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                "user": info["user"],
-                "command": info["command"],
-                "history_info": info["history_info"],
-                "timestamp": timestamp
-            }
-        }
-        for info in history_info
-    ]
-
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    
+    return history_info
 
 
 # SERVICES
 
-def get_services_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
-    
+def get_services(hostname, username, password):
     # List to hold the service information.
     services_info = []
+    
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -457,7 +353,17 @@ def get_services_and_insert(hostname, username, password, es_url, es_user, es_pa
                 status_symbol = line[4]  # Extracts the '+' or '-' character from the line
                 status = "running" if status_symbol == '+' else "stopped"
                 service = line[8:].strip()  # Extracts the service name from the line
-                services_info.append({"service": service, "status": status, "serviceinfo": line.strip()})
+                
+                # Get the current UTC time in ISO 8601 format
+                timestamp = datetime.utcnow().isoformat()
+                
+                services_info.append({
+                    "hostname": hostname,
+                    "service": service,
+                    "status": status,
+                    "serviceinfo": line.strip(),
+                    "timestamp": timestamp
+                })
                 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -465,41 +371,13 @@ def get_services_and_insert(hostname, username, password, es_url, es_user, es_pa
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
-
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                "service": service_info["service"],
-                "status": service_info["status"],
-                "serviceinfo": service_info["serviceinfo"],
-                "timestamp": timestamp
-            }
-        }
-        for service_info in services_info
-    ]
     
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    return services_info
 
 
 # CRONJOBS
 
-def get_cron_jobs_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        basic_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
-
+def get_cron_jobs(hostname, username, password):
     # List to hold the cron job information.
     cron_jobs_info = []
     try:
@@ -525,6 +403,11 @@ def get_cron_jobs_and_insert(hostname, username, password, es_url, es_user, es_p
                             "command": ' '.join(fields[6:]),
                             "croninfo": line  # Added croninfo
                         }
+
+                        # Get the current UTC time in ISO 8601 format
+                        cron_job["timestamp"] = datetime.utcnow().isoformat()
+                        cron_job["hostname"] = hostname
+
                         cron_jobs_info.append(cron_job)
 
     except paramiko.AuthenticationException:
@@ -533,41 +416,16 @@ def get_cron_jobs_and_insert(hostname, username, password, es_url, es_user, es_p
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
-
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index, 
-            "_source": {
-                "hostname": hostname, 
-                **cron_job,
-                "timestamp": timestamp  
-            }
-        } 
-        for cron_job in cron_jobs_info  # Modified to accommodate croninfo
-    ]
-
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    
+    return cron_jobs_info
 
 
-# Get /etc/hosts file
+# Get the /etc/hosts file
 
-def get_hosts_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
-
+def get_hosts(hostname, username, password):
     # List to hold the hosts information.
     hosts_info = []
+    
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -584,7 +442,14 @@ def get_hosts_and_insert(hostname, username, password, es_url, es_user, es_pass,
                         ip_address = parts[0]
                         for host in parts[1:]:
                             if not host.startswith("#"):  # Skip inline comments
-                                hosts_info.append({"ip_address": ip_address, "host": host})  # Structured host_info
+                                # Structured host_info
+                                host_data = {
+                                    "ip_address": ip_address,
+                                    "host": host,
+                                    "timestamp": datetime.utcnow().isoformat(),
+                                    "hostname": hostname
+                                }
+                                hosts_info.append(host_data)
 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -593,53 +458,32 @@ def get_hosts_and_insert(hostname, username, password, es_url, es_user, es_pass,
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
+    return hosts_info
 
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                **host_info,
-                "timestamp": timestamp
-            }
-        }
-        for host_info in hosts_info  # Modified to accommodate structured host_info
-    ]
-
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
 
 # CONNECTIONS
 
-def get_connections_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+def get_connections(hostname, username, password):
 
     # List to hold the connection information.
     connections_info = []
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
-            
+
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('netstat -antup')
             lines = stdout.read().decode('utf-8').splitlines()
+
             for line in lines:
                 # Skip non-data lines
                 if not line.startswith(("tcp", "udp")):
                     continue
+
                 fields = line.split()
                 # Extracting fields and appending to connections_info
                 proto = fields[0]
@@ -649,7 +493,8 @@ def get_connections_and_insert(hostname, username, password, es_url, es_user, es
                 foreign_address, foreign_port = fields[4].rsplit(':', 1)
                 state = fields[5] if proto != 'udp' else 'N/A'
                 pid = fields[-1].split('/')[0] if '/' in fields[-1] else 'N/A'
-                connections_info.append({
+
+                connection_data = {
                     "Proto": proto,
                     "Recv-Q": recv_q,
                     "Send-Q": send_q,
@@ -658,8 +503,11 @@ def get_connections_and_insert(hostname, username, password, es_url, es_user, es
                     "Foreign Address": foreign_address,
                     "Foreign Port": foreign_port,
                     "State": state,
-                    "PID": pid
-                })
+                    "PID": pid,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "hostname": hostname
+                }
+                connections_info.append(connection_data)
 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -668,39 +516,16 @@ def get_connections_and_insert(hostname, username, password, es_url, es_user, es
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
+    return connections_info
 
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                "timestamp": timestamp,
-                **connection_info
-            }
-        }
-        for connection_info in connections_info
-    ]
 
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+# FAILED LOGINS
 
-# FAILED LOGINS - lastb command
-
-def get_lastb_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+def get_lastb(hostname, username, password):
 
     # List to hold the lastb information.
     lastb_info_list = []
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -730,12 +555,15 @@ def get_lastb_and_insert(hostname, username, password, es_url, es_user, es_pass,
                 ip_address = fields[2]
                 # Concatenating fields to capture the entire time information
                 time_info = " ".join(fields[3:7])
-                lastb_info_list.append({
+                lastb_data = {
                     "user": user,
                     "terminal": terminal,
                     "ip_address": ip_address,
                     "time": time_info,
-                })
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "hostname": hostname
+                }
+                lastb_info_list.append(lastb_data)
 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -744,38 +572,14 @@ def get_lastb_and_insert(hostname, username, password, es_url, es_user, es_pass,
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                "timestamp": timestamp,
-                **lastb_info
-            }
-        }
-        for lastb_info in lastb_info_list
-    ]
-
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    return lastb_info_list
 
 # MEMORY INFO
 
-def get_meminfo_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+def get_meminfo(hostname, username, password):
 
     mem_info = {}
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -788,7 +592,7 @@ def get_meminfo_and_insert(hostname, username, password, es_url, es_user, es_pas
             for line in stdout.read().decode('utf-8').splitlines():
                 key, value = line.split(":")
                 mem_info[key.strip()] = value.strip()
-                
+
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
     except paramiko.SSHException as e:
@@ -796,35 +600,18 @@ def get_meminfo_and_insert(hostname, username, password, es_url, es_user, es_pas
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch action and perform insert.
-    action = {
-        "_index": es_index,
-        "_source": {
-            "hostname": hostname,
-            "timestamp": timestamp,
-            **mem_info
-        }
+    return {
+        "hostname": hostname,
+        "timestamp": datetime.utcnow().isoformat(),
+        "meminfo": mem_info
     }
-    
-    try:
-        helpers.bulk(es, [action])
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
 
+# ACTIVE INTERNET CONNECTIONS
 
-def get_internet_connections_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
+def get_internet_connections(hostname, username, password):
     
-    # List to hold the connection information.
     connections_info = []
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -861,7 +648,8 @@ def get_internet_connections_and_insert(hostname, username, password, es_url, es
                         "Foreign Address": foreign_address,
                         "Foreign Port": foreign_port,
                         "State": state,
-                        "PID": pid
+                        "PID": pid,
+                        "timestamp": datetime.utcnow().isoformat()
                     })
 
     except paramiko.AuthenticationException:
@@ -871,40 +659,15 @@ def get_internet_connections_and_insert(hostname, username, password, es_url, es
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
-
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                "timestamp": timestamp,
-                **connection_info
-            }
-        }
-        for connection_info in connections_info
-    ]
-
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
+    return connections_info
 
 
 # UNIX SOCKETS - unix section of the netstat -anp command
 
-def get_unix_sockets_and_insert(hostname, username, password, es_url, es_user, es_pass, es_index):
-    # Establishing Elasticsearch Connection
-    es = Elasticsearch(
-        [es_url],
-        http_auth=(es_user, es_pass),
-        verify_certs=False,
-    )
-
+def get_unix_sockets_info(hostname, username, password):
     # List to hold the socket information.
     unix_sockets_info = []
+
     try:
         # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
@@ -916,6 +679,7 @@ def get_unix_sockets_and_insert(hostname, username, password, es_url, es_user, e
             stdin, stdout, stderr = client.exec_command('netstat -anp')
             lines = stdout.read().decode('utf-8').splitlines()
             parse_unix = False
+
             for line in lines:
                 if "Active UNIX domain sockets" in line:
                     parse_unix = True
@@ -940,39 +704,25 @@ def get_unix_sockets_and_insert(hostname, username, password, es_url, es_user, e
                             "I-Node": match.group(6),
                             "PID": pid,
                             "Program name": program,
-                            "Path": match.group(8) if match.group(8) else 'N/A'
+                            "Path": match.group(8) if match.group(8) else 'N/A',
+                            "hostname": hostname,
+                            "timestamp": datetime.utcnow().isoformat(),
                         })
 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
+        return []
     except paramiko.SSHException as e:
         print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+        return []
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+        return []
 
-    # Get the current UTC time in ISO 8601 format
-    timestamp = datetime.utcnow().isoformat()
+    return unix_sockets_info
 
-    # Prepare Elasticsearch actions and perform bulk insert.
-    actions = [
-        {
-            "_index": es_index,
-            "_source": {
-                "hostname": hostname,
-                "timestamp": timestamp,
-                **unix_socket_info
-            }
-        }
-        for unix_socket_info in unix_sockets_info
-    ]
 
-    try:
-        helpers.bulk(es, actions)
-    except es_exceptions.ElasticsearchException as e:
-        print(f"Error occurred while inserting data into Elasticsearch: {str(e)}")
-
-# FUNCTION TO CREATE INDEX PATTERNS
-
+# CREATE INDEX PATTERNS
 def create_index_pattern(elastic_url, elastic_user, elastic_pass, index_pattern):
     
     # Define the URL for checking and creating the index pattern in the .kibana index
@@ -994,7 +744,7 @@ def create_index_pattern(elastic_url, elastic_user, elastic_pass, index_pattern)
         "type": "index-pattern",
         "index-pattern": {
             "title": index_pattern,
-            "timeFieldName": "hap.Time"
+            "timeFieldName": "timestamp"
         }
     }
     

@@ -1,12 +1,13 @@
 import sys
 import linux_enum_module as lem
 
+# Validate arguments
 if len(sys.argv) < 6:
     print("Usage: python3 enumerate_linux_users.py <hostnameString> <username> <password> <elasticURL> <elasticUsername> <elasticPassword>")
     sys.exit(1)
 
 # Linux Creds
-hostnames = sys.argv[1]
+hostnames = sys.argv[1].split(',')
 linux_user = sys.argv[2]
 linux_pass = sys.argv[3]
 
@@ -15,23 +16,36 @@ es_url = sys.argv[4]
 es_user = sys.argv[5]
 es_pass = sys.argv[6]
 
-for hostname in hostnames.split(','):
-    lem.get_users_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-users')
-    lem.get_groups_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-groups')
-    lem.get_processes_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-processes')
-    lem.get_shadow_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-shadow')
-    lem.get_lastlog_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-lastlog')
-    lem.get_auth_logs_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-authlog')
-    lem.get_user_history_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-history')
-    lem.get_services_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-services')
-    lem.get_cron_jobs_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-cronjobs')
-    lem.get_hosts_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-hosts')
-    lem.get_connections_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-connections')
-    lem.get_lastb_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-lastb')
-    lem.get_meminfo_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-memory')
-    lem.get_internet_connections_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-internet-connections')
-    lem.get_unix_sockets_and_insert(hostname, linux_user, linux_pass, es_url, es_user, es_pass, 'hap-linux-unix-sockets')
+# Define a mapping for information to gather and their corresponding functions and Elasticsearch index
+info_mapping = {
+    "processes": (lem.get_running_processes, "hap-linux-processes"),
+    "users": (lem.get_users, "hap-linux-users"),
+    "groups": (lem.get_groups, "hap-linux-groups"),
+    "shadow": (lem.get_shadow, "hap-linux-shadow"),
+    "lastlog": (lem.get_lastlog, "hap-linux-lastlog"),
+    "authlogs": (lem.get_auth_logs, "hap-linux-authlog"),
+    "history": (lem.get_user_history, "hap-linux-history"),
+    "services": (lem.get_services, "hap-linux-services"),
+    "cronjobs": (lem.get_cron_jobs, "hap-linux-cronjobs"),
+    "hosts": (lem.get_hosts, "hap-linux-hosts"),
+    "lastb": (lem.get_lastb, "hap-linux-lastb"),
+    "memory": (lem.get_meminfo, "hap-linux-memory"),
+    "connections": (lem.get_connections, "hap-linux-connections"),
+    "internet": (lem.get_internet_connections, "hap-linux-internet-connections"),
+    "sockets": (lem.get_unix_sockets_info, "hap-linux-unix-sockets"),
+}
 
+for key, (gather_func, es_index) in info_mapping.items():
+    all_info = []
+
+    for hostname in hostnames:
+        info = gather_func(hostname, linux_user, linux_pass)
+        if info:  # Check if the list is not empty
+            all_info.extend(info)
+    
+    # Only send data to Elasticsearch if there's something to send
+    if all_info:
+        lem.send_to_elasticsearch(all_info, es_url, es_index, es_user, es_pass)
 
 # List of all index patterns used by the script
 index_patterns = [
