@@ -577,8 +577,10 @@ def get_lastb(hostname, username, password):
 # MEMORY INFO
 
 def get_meminfo(hostname, username, password):
-
-    mem_info = {}
+    mem_info = {
+        "hostname": hostname,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
     try:
         # SSH Client setup and connect.
@@ -600,11 +602,8 @@ def get_meminfo(hostname, username, password):
     except Exception as e:
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
 
-    return {
-        "hostname": hostname,
-        "timestamp": datetime.utcnow().isoformat(),
-        "meminfo": mem_info
-    }
+    return mem_info
+
 
 # ACTIVE INTERNET CONNECTIONS
 
@@ -759,3 +758,26 @@ def create_index_pattern(elastic_url, elastic_user, elastic_pass, index_pattern)
     
     # Return the response object for further inspection (e.g., check status_code)
     return create_response
+
+# FUNCTION TO SHIP MEMORY DATA TO ELASTIC
+def send_mem_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
+    # pass base64 credentials in the header
+    credentials = base64.b64encode(f"{es_user}:{es_pass}".encode()).decode()
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic {credentials}"
+    }
+    
+    # Bulk indexing URL for Elasticsearch
+    bulk_url = f"{es_url}/{index_name}/_bulk"
+    
+    # The action and metadata line
+    bulk_data = json.dumps({"index": {}}) + "\n"
+    # The actual data
+    bulk_data += json.dumps(data) + "\n"
+    
+    response = requests.post(bulk_url, headers=headers, data=bulk_data, verify=False)
+    
+    if response.status_code != 200:
+        print(f"Failed to insert data into Elasticsearch. Response: {response.text}")

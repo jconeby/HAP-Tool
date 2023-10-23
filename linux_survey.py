@@ -29,7 +29,6 @@ info_mapping = {
     "cronjobs": (lem.get_cron_jobs, "hap-linux-cronjobs"),
     "hosts": (lem.get_hosts, "hap-linux-hosts"),
     "lastb": (lem.get_lastb, "hap-linux-lastb"),
-    "memory": (lem.get_meminfo, "hap-linux-memory"),
     "connections": (lem.get_connections, "hap-linux-connections"),
     "internet": (lem.get_internet_connections, "hap-linux-internet-connections"),
     "sockets": (lem.get_unix_sockets_info, "hap-linux-unix-sockets"),
@@ -46,6 +45,12 @@ for key, (gather_func, es_index) in info_mapping.items():
     # Only send data to Elasticsearch if there's something to send
     if all_info:
         lem.send_to_elasticsearch(all_info, es_url, es_index, es_user, es_pass)
+
+# Collect memory info and send to elastic
+for hostname in hostnames:
+    mem_info = lem.get_meminfo(hostname, linux_user, linux_pass)
+    if mem_info:
+        lem.send_mem_to_elasticsearch(mem_info, es_url, 'hap-linux-memory', es_user, es_pass)
 
 # List of all index patterns used by the script
 index_patterns = [
