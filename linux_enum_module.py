@@ -197,9 +197,6 @@ def get_shadow(hostname, username, password):
 
 # LASTLOG
 
-import paramiko
-from datetime import datetime
-
 def get_lastlog(hostname, username, password):
     # List to hold the lastlog information.
     lastlog_info = []
@@ -347,21 +344,34 @@ def get_services(hostname, username, password):
             client.connect(hostname, username=username, password=password)
             
             # Execute command and process output.
-            stdin, stdout, stderr = client.exec_command('service --status-all')
-            for line in stdout.read().decode('utf-8').splitlines():
-                # Parsing service status and name
-                status_symbol = line[4]  # Extracts the '+' or '-' character from the line
-                status = "running" if status_symbol == '+' else "stopped"
-                service = line[8:].strip()  # Extracts the service name from the line
+            stdin, stdout, stderr = client.exec_command('systemctl list-units --type=service --all')
+            lines = stdout.read().decode('utf-8').splitlines()
+            
+            for line in lines:
+                # Exclude the lines which are explanatory text or don't look like service data
+                if "LOAD" in line or "ACTIVE" in line or "SUB" in line or len(line.strip()) == 0 or "listed." in line or "To show all" in line:
+                    continue
+                
+                # Extract the service details
+                if "not-found" in line:
+                    service_name = line.split("●")[1].split()[0]
+                    load_status = "not-found"
+                else:
+                    service_name = line.split()[0]
+                    load_status = "loaded"
+
+                active_status = line.split(load_status)[1].strip().split()[0]
+                sub_status = line.split(active_status)[1].strip().split()[0]
                 
                 # Get the current UTC time in ISO 8601 format
                 timestamp = datetime.utcnow().isoformat()
                 
                 services_info.append({
                     "hostname": hostname,
-                    "service": service,
-                    "status": status,
-                    "serviceinfo": line.strip(),
+                    "service": service_name,
+                    "load": load_status,
+                    "active": active_status,
+                    "sub": sub_status,
                     "timestamp": timestamp
                 })
                 
@@ -373,6 +383,7 @@ def get_services(hostname, username, password):
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
     
     return services_info
+
 
 
 # CRONJOBS
