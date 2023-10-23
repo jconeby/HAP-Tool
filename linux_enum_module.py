@@ -247,7 +247,6 @@ def get_lastlog(hostname, username, password):
 # AUTH LOGS - This function is to identify any odd SSH & Telent logins
 
 def get_auth_logs(hostname, username, password):
-    
     # List to hold the log information.
     logs_info = []
 
@@ -258,8 +257,20 @@ def get_auth_logs(hostname, username, password):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
             
+            # Determine Linux distribution
+            stdin, stdout, stderr = client.exec_command("lsb_release -i")
+            distro_info = stdout.read().decode('utf-8').strip()
+            
+            if 'Debian' in distro_info or 'Ubuntu' in distro_info:
+                log_file = "/var/log/auth.log"
+            elif 'RedHat' in distro_info or 'CentOS' in distro_info or 'Fedora' in distro_info:
+                log_file = "/var/log/secure"
+            else:
+                # Default to Debian if unable to determine
+                log_file = "/var/log/auth.log"
+
             # Execute command and process output.
-            command = "grep -E 'ssh|telnet' /var/log/auth.log"
+            command = f"grep -E 'ssh|telnet' {log_file}"
             stdin, stdout, stderr = client.exec_command(command)
 
             for line in stdout.read().decode('utf-8').splitlines():
