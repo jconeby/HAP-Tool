@@ -171,13 +171,20 @@ def get_shadow(hostname, username, password):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
             
-            # Execute command and process output.
+            # Execute sudo command and process output.
             command = 'sudo -S cat /etc/shadow'  # -S option makes sudo read password from stdin
             stdin, stdout, stderr = client.exec_command(command)
             stdin.write(password + '\n')  # Sending the sudo password
             stdin.flush()
 
-            for line in stdout.read().decode('utf-8').splitlines():
+            output = stdout.read().decode('utf-8')
+
+            # If no data returned, use 'cat /etc/shadow' command.
+            if not output.strip():
+                stdin, stdout, stderr = client.exec_command('cat /etc/shadow')
+                output = stdout.read().decode('utf-8')
+
+            for line in output.splitlines():
                 user, shadow_info = line.split(":", 1)  # Splitting by the first colon
                 shadow_info_list.append({
                     "hostname": hostname,
@@ -194,6 +201,7 @@ def get_shadow(hostname, username, password):
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
     
     return shadow_info_list
+
 
 # LASTLOG
 
