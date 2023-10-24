@@ -48,27 +48,49 @@ def get_running_processes(hostname, username, password):
             client.connect(hostname, username=username, password=password)
             
             # Execute command and process output.
-            stdin, stdout, stderr = client.exec_command('ps -auxww')
+            command = 'ps -eo user,uid,pid,ppid,vsz,rss,stat,tty,ni,cputime,comm,cmd'
+            stdin, stdout, stderr = client.exec_command(command)
             # Skipping the header line of the output
             lines = stdout.read().decode('utf-8').splitlines()[1:]
+
+            # Creating a mapping of PID to COMM
+            pid_to_comm = {}
+            for line in lines:
+                fields = line.split(None, 11)
+                pid_to_comm[fields[2]] = fields[10]
             
             for line in lines:
                 # Splitting by whitespace to extract fields
-                fields = line.split(None, 10)
+                fields = line.split(None, 11)
+                status = fields[6][0]  # Grabbing the first character of the STAT field
+                status_description = {
+                    'D': "Uninterruptable Sleep",
+                    'R': "Running & Runnable",
+                    'S': "Interruptable Sleep",
+                    'T': "Stopped",
+                    'Z': "Zombie",
+                    'I': "Idle"
+                }.get(status, "Unknown")  # Default to "Unknown" if the status isn't recognized
+                
+                parent_process_name = pid_to_comm.get(fields[3], "")  # Get parent process name or default to empty
+
                 processes_info.append({
                     "hostname": hostname,
                     "timestamp": timestamp,
                     "USER": fields[0],
-                    "PID": fields[1],
-                    "%CPU": fields[2],
-                    "%MEM": fields[3],
+                    "UID": fields[1],
+                    "PID": fields[2],
+                    "PPID": fields[3],
                     "VSZ": fields[4],
                     "RSS": fields[5],
-                    "TTY": fields[6],
-                    "STAT": fields[7],
-                    "START": fields[8],
-                    "TIME": fields[9],
-                    "COMMAND": fields[10]
+                    "STAT": fields[6],
+                    "TTY": fields[7],
+                    "NI": fields[8],
+                    "CPUTIME": fields[9],
+                    "COMM": fields[10],
+                    "CMD": fields[11],
+                    "Status": status_description,
+                    "ParentProcessName": parent_process_name
                 })
                 
     except paramiko.AuthenticationException:
@@ -79,6 +101,7 @@ def get_running_processes(hostname, username, password):
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
     
     return processes_info
+
 
 
 # LOCAL USERS
