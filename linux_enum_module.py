@@ -669,6 +669,7 @@ def get_internet_connections(hostname, username, password):
                     state = fields[5] if proto != 'udp' else 'N/A'
                     pid = fields[-1].split('/')[0] if '/' in fields[-1] else 'N/A'
                     connections_info.append({
+                        "hostname": hostname,
                         "Proto": proto,
                         "Recv-Q": recv_q,
                         "Send-Q": send_q,
