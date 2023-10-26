@@ -546,6 +546,7 @@ def get_connections(hostname, username, password):
                 foreign_address, foreign_port = fields[4].rsplit(':', 1)
                 state = fields[5] if proto != 'udp' else 'N/A'
                 pid = fields[-1].split('/')[0] if '/' in fields[-1] else 'N/A'
+                program = fields[-1].split('/')[1] if '/' in fields[-1] else 'N/A'
 
                 connection_data = {
                     "Proto": proto,
@@ -557,6 +558,7 @@ def get_connections(hostname, username, password):
                     "Foreign Port": foreign_port,
                     "State": state,
                     "PID": pid,
+                    "Program": program,
                     "timestamp": datetime.utcnow().isoformat(),
                     "hostname": hostname
                 }
