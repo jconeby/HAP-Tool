@@ -648,6 +648,16 @@ def get_meminfo(hostname, username, password):
                 key, value = line.split(":")
                 mem_info[key.strip()] = value.strip()
 
+        # Extract memory values and compute the percentage of free memory.
+        mem_total_kb = int(mem_info['MemTotal'].split()[0])
+        mem_free_kb = int(mem_info['MemFree'].split()[0])
+        mem_available_kb = int(mem_info['MemAvailable'].split()[0])
+        
+        mem_info['MemTotalkB'] = mem_total_kb
+        mem_info['MemFreekB'] = mem_free_kb
+        mem_info['MemAvailablekB'] = mem_available_kb
+        mem_info['PercentageMemFree'] = (mem_free_kb / mem_total_kb) * 100
+
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
     except paramiko.SSHException as e:
