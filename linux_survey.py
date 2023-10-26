@@ -32,6 +32,7 @@ info_mapping = {
     "connections": (lem.get_connections, "hap-linux-connections"),
     "internet": (lem.get_internet_connections, "hap-linux-internet-connections"),
     "sockets": (lem.get_unix_sockets_info, "hap-linux-unix-sockets"),
+    "iptables": (lem.get_iptables_info, "hap-linux-iptables"),
 }
 
 for key, (gather_func, es_index) in info_mapping.items():
@@ -60,9 +61,12 @@ index_patterns = [
     'hap-linux-users', 'hap-linux-groups', 'hap-linux-processes', 'hap-linux-shadow',
     'hap-linux-lastlog', 'hap-linux-authlog', 'hap-linux-history', 'hap-linux-services',
     'hap-linux-cronjobs', 'hap-linux-hosts', 'hap-linux-connections', 'hap-linux-lastb',
-    'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets', 'hap-linux-os'
+    'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets', 'hap-linux-os', 'hap-linux-iptables', 'crew_log'
 ]
 
 # Ensure all index patterns exist and if not create them
 for index_pattern in index_patterns:
     lem.create_index_pattern(es_url, es_user, es_pass, index_pattern)
+
+# Log that the script was ran in Elastic
+lem.log_script_execution_to_elastic(es_url, es_user, es_pass, ','.join(hostnames))

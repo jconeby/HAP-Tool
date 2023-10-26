@@ -823,6 +823,58 @@ def get_os_info(hostname, username, password):
     return os_info
 
 
+def get_iptables_info(hostname, username, password):
+    # List to hold iptables information.
+    iptables_info_list = []
+    
+    # Get the current UTC time in ISO 8601 format.
+    timestamp = datetime.utcnow().isoformat()
+
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute sudo command and process output.
+            command = 'sudo -S iptables -L -v -n'  # -S option makes sudo read password from stdin
+            stdin, stdout, stderr = client.exec_command(command)
+            stdin.write(password + '\n')  # Sending the sudo password
+            stdin.flush()
+
+            output = stdout.read().decode('utf-8')
+            lines = output.splitlines()
+            
+            current_chain = None
+            for line in lines:
+                # Check for chain name headers.
+                if line.startswith(("Chain INPUT", "Chain FORWARD", "Chain OUTPUT")):
+                    current_chain = line.split()[1]
+                    continue
+                
+                # Skipping non-data lines and comments.
+                if not line or "target" in line or line.startswith("-"):
+                    continue
+
+                # Parsing rule info.
+                iptables_info_list.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
+                    "Chain": current_chain,
+                    "rule_info": line.strip()
+                })
+
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+    
+    return iptables_info_list
+
+
 # CREATE INDEX PATTERNS
 def create_index_pattern(elastic_url, elastic_user, elastic_pass, index_pattern):
     
@@ -885,3 +937,32 @@ def send_data_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
     if response.status_code != 200:
         print(f"Failed to insert data into Elasticsearch. Response: {response.text}")
 
+
+# Function to log the script execution in Elasticsearch
+def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames):
+    
+    # pass base64 credentials in the header
+    credentials = base64.b64encode(f"{es_user}:{es_pass}".encode()).decode()
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic {credentials}"
+    }
+
+    log_object = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "hostname": hostnames,
+        "command": f"HAP Linux script survey ran on {hostnames}"
+    }
+    
+    document_url = f"{es_url}/crew_log/_doc"
+
+    response = requests.post(
+        document_url, 
+        json=log_object, 
+        headers=headers,
+        verify=False
+    )
+
+    if response.status_code != 200 and response.status_code != 201:
+        print(f"Failed to insert data into Elasticsearch. Response: {response.text}")
