@@ -46,18 +46,21 @@ for key, (gather_func, es_index) in info_mapping.items():
     if all_info:
         lem.send_to_elasticsearch(all_info, es_url, es_index, es_user, es_pass)
 
-# Collect memory info and send to elastic
+# Collect memory and os info and send to elastic
 for hostname in hostnames:
     mem_info = lem.get_meminfo(hostname, linux_user, linux_pass)
+    os_info = lem.get_os_info(hostname, linux_user, linux_pass)
     if mem_info:
-        lem.send_mem_to_elasticsearch(mem_info, es_url, 'hap-linux-memory', es_user, es_pass)
+        lem.send_data_to_elasticsearch(mem_info, es_url, 'hap-linux-memory', es_user, es_pass)
+    if os_info:
+        lem.send_data_to_elasticsearch(os_info, es_url, 'hap-linux-os', es_user, es_pass)
 
 # List of all index patterns used by the script
 index_patterns = [
     'hap-linux-users', 'hap-linux-groups', 'hap-linux-processes', 'hap-linux-shadow',
     'hap-linux-lastlog', 'hap-linux-authlog', 'hap-linux-history', 'hap-linux-services',
     'hap-linux-cronjobs', 'hap-linux-hosts', 'hap-linux-connections', 'hap-linux-lastb',
-    'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets'
+    'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets', 'hap-linux-os'
 ]
 
 # Ensure all index patterns exist and if not create them

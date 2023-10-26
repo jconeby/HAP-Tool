@@ -774,6 +774,42 @@ def get_unix_sockets_info(hostname, username, password):
 
     return unix_sockets_info
 
+# OS Info
+
+def get_os_info(hostname, username, password):
+    # Dictionary to hold the OS information.
+    os_info = {}
+
+    # Get the current UTC time in ISO 8601 format.
+    timestamp = datetime.utcnow().isoformat()
+
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute command and process output.
+            stdin, stdout, stderr = client.exec_command('cat /etc/os-release')
+            for line in stdout.read().decode('utf-8').splitlines():
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    os_info[key] = value.strip('"')
+            
+            # Add hostname and timestamp to the dictionary.
+            os_info["hostname"] = hostname
+            os_info["timestamp"] = timestamp
+                
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+    
+    return os_info
+
 
 # CREATE INDEX PATTERNS
 def create_index_pattern(elastic_url, elastic_user, elastic_pass, index_pattern):
@@ -813,8 +849,9 @@ def create_index_pattern(elastic_url, elastic_user, elastic_pass, index_pattern)
     # Return the response object for further inspection (e.g., check status_code)
     return create_response
 
-# FUNCTION TO SHIP MEMORY DATA TO ELASTIC
-def send_mem_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
+
+# ALTERNATE FUNCTION TO SHIP MEMORY DATA TO ELASTIC
+def send_data_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
     # pass base64 credentials in the header
     credentials = base64.b64encode(f"{es_user}:{es_pass}".encode()).decode()
 
@@ -835,3 +872,4 @@ def send_mem_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
     
     if response.status_code != 200:
         print(f"Failed to insert data into Elasticsearch. Response: {response.text}")
+
