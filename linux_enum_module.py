@@ -227,6 +227,11 @@ def get_shadow(hostname, username, password):
 
 
 # LASTLOG
+"""
+The lastlog command is used to display the last time a user logged into a system.
+This command can be used to track who has logged into a system.  This information can be used to identify potential security
+threats, such as unauthorized access attempts.
+"""
 
 def get_lastlog(hostname, username, password):
     # List to hold the lastlog information.
@@ -276,6 +281,13 @@ def get_lastlog(hostname, username, password):
 
 
 # AUTH LOGS - This function is pulling logs from /var/log/auth.log
+"""
+The /var/log/auth.log file is a key resource for security investigations on Debian based systems because
+it records authentication related activities.  It will record login attempts, user creation and deletion, 
+use of elevated privileges, user & group modifications, authentication mechanisms, source information,
+session activities, and PAM activities.
+
+"""
 
 def get_auth_logs(hostname, username, password):
     logs_info = []
@@ -340,6 +352,11 @@ def get_auth_logs(hostname, username, password):
 
 
 # SECURE LOGS - This function is pulling logs from /var/log/secure
+"""
+The /var/log/secure files is found on Red Hat based Linux distros. It is very similar to the /var/log/auth.log file found on debian distros.
+This log will show login attempts, user authentication activities, elevated privileges, ssh activities, remote access details, 
+service specific entries, account modifications, and pluggable authentication modules (PAM) logs.
+"""
 
 def get_secure_logs(hostname, username, password):
     logs_info = []
@@ -402,11 +419,79 @@ def get_secure_logs(hostname, username, password):
 
     return logs_info
 
+# MESSAGE LOGS - This function is pulling logs from /var/log/messages
+"""
+The /var/log/messages log is not strictly a security log such as /var/log/auth.log, however, it contains a wealth of
+information that can be invaluable from a security perspective.  It captures broad system activity logging, service failures,
+hardware errors, kerel messages, network activities, service and application logs, and cron jobs.
+"""
+
+def get_messages_logs(hostname, username, password):
+    logs_info = []
+
+    # Get the current UTC time in ISO 8601 format for your original timestamp
+    timestamp = datetime.utcnow().isoformat()
+
+    # Regular expression pattern for log parsing.
+    messages_pattern = re.compile(r'(?P<log_timestamp>\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2})\s(?P<systemname>[\w\-]+)\s(?P<process>\w+)\[(?P<PID>\d+)\]:\s(?P<message>.*)')
+
+    try:
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+
+            log_file = "/var/log/messages"
+            log_name = "messages.log"
+            
+            # Try with sudo privileges
+            command = f"sudo -S cat {log_file} && echo 'file_exists'"
+            stdin, stdout, stderr = client.exec_command(command)
+            stdin.write(f"{password}\n")  # Supply the password to sudo.
+            stdin.flush()
+
+            output = stdout.read().decode('utf-8').strip().splitlines()
+            
+            # If sudo failed, try without sudo
+            if "permission denied" in " ".join(output).lower() or not output:
+                stdin, stdout, stderr = client.exec_command(f"cat {log_file}")
+                output = stdout.read().decode('utf-8').strip().splitlines()
+
+            for line in output:
+                match = messages_pattern.match(line)
+                if match:
+                    # Convert the log_timestamp to an ISO 8601 compliant format.
+                    raw_timestamp = match.group("log_timestamp")
+                    current_year = datetime.now().year  # assuming log timestamp is from the current year
+                    dt = datetime.strptime(f"{current_year} {raw_timestamp}", '%Y %b %d %H:%M:%S')
+                    formatted_log_timestamp = dt.isoformat() + 'Z'
+
+                    logs_info.append({
+                        "hostname": hostname,
+                        "timestamp": timestamp,
+                        "loginfo": line,
+                        "logname": log_name,
+                        "log_timestamp": formatted_log_timestamp,
+                        "systemname": match.group("systemname"),
+                        "process": match.group("process"),
+                        "PID": match.group("PID"),
+                        "message": match.group("message")
+                    })
+
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    return logs_info
+
 
 # BASH HISTORY
+""" Fetches the bash history for all users on the given host. """
 
 def get_user_history(hostname, username, password):
-    """ Fetches the bash history for all users on the given host. """
     
     # List to hold the history information.
     history_info = []
@@ -509,7 +594,6 @@ def get_services(hostname, username, password):
     return services_info
 
 
-
 # CRONJOBS
 
 def get_cron_jobs(hostname, username, password):
@@ -556,6 +640,13 @@ def get_cron_jobs(hostname, username, password):
 
 
 # Get the /etc/hosts file
+"""
+The /etc/hosts file provides a mechanism to map human-friendly domain names to IP addresses locally, without
+consulting an external DNS server.  Some malware modifies the /etc/hosts file to redirect common websites
+to malicious servers.  In addition, if an organization relies on DNS logs for monitoring, altering the /etc/hosts
+file can help atackers bypass this layer of detection.  Direct IP connections without DNS resolution might not trigger alerts
+in some monitoring setups.
+"""
 
 def get_hosts(hostname, username, password):
     # List to hold the hosts information.
@@ -597,6 +688,11 @@ def get_hosts(hostname, username, password):
 
 
 # CONNECTIONS
+"""
+The netstat -antup command provides a snapshot of all active network connections on a system. This can help determine
+which external IP addresses the system is communicating with and the ports that are being used.  In addition, it lists ports on which
+the system is listening for incoming connections.  This can help identify unexpected or rogue services.
+"""
 
 def get_connections(hostname, username, password):
 
@@ -657,6 +753,12 @@ def get_connections(hostname, username, password):
 
 
 # FAILED LOGINS
+"""
+The lastb command shows failed login attempts on a system.  A large number of failed login attempts can indicate a brute-force attack
+where an adversary is trying to guess a user's credentials.  The IP addresses or hostnames of the entities in the lastb can help you
+identify potential malicious sources.  For example, is you see numerous failed login attempts from a foreign IP address that may be 
+suspicious.
+"""
 
 def get_lastb(hostname, username, password):
 
@@ -676,6 +778,8 @@ def get_lastb(hostname, username, password):
             stdin.write(password + '\n')  # Sending the sudo password
             stdin.flush()
 
+            current_year = str(datetime.utcnow().year)  # Get the current year
+
             for line in stdout.read().decode('utf-8').splitlines():
                 # Skip empty or unwanted lines
                 if not line.strip() or 'btmp begins' in line:
@@ -683,21 +787,33 @@ def get_lastb(hostname, username, password):
 
                 # Parsing the data as needed
                 fields = line.split()
-                if len(fields) < 10:
-                    print(f"Skipping malformed line: {line}")
-                    continue
 
-                user = fields[0]
-                terminal = fields[1]
-                ip_address = fields[2]
-                # Concatenating fields to capture the entire time information
-                time_info = " ".join(fields[3:7])
+                # Differentiating between SSH and local login attempts
+                if "ssh" in line:
+                    if len(fields) < 10:
+                        print(f"Skipping malformed line: {line}")
+                        continue
+                    user, terminal, ip_address = fields[:3]
+                    time_info = " ".join(fields[3:7])
+                else:  # Local login
+                    if len(fields) < 8:
+                        print(f"Skipping malformed line: {line}")
+                        continue
+                    user, terminal = fields[:2]
+                    ip_address = "LOCAL"
+                    time_info = " ".join(fields[2:6])
+
+                # Extracting and formatting the time information
+                dt = datetime.strptime(f"{current_year} {time_info}", '%Y %a %b %d %H:%M')
+                formatted_log_timestamp = dt.isoformat() + 'Z'
+
                 lastb_data = {
                     "user": user,
                     "terminal": terminal,
                     "ip_address": ip_address,
                     "time": time_info,
                     "timestamp": datetime.utcnow().isoformat(),
+                    "log_timestamp": formatted_log_timestamp,
                     "hostname": hostname
                 }
                 lastb_info_list.append(lastb_data)
@@ -711,7 +827,14 @@ def get_lastb(hostname, username, password):
 
     return lastb_info_list
 
+
 # MEMORY INFO
+"""
+The cat /proc/meminfo command provides details abou the system's memory usage.  Memory can hold traces of malicious activity,
+like certain malware that only resides in RAM and doesn't touch the disk.  A sudden or unexplained spike in memory usage
+might lead an investigator to dive deeper using memory forensic tools.  If an adversary is running processes that consume a large
+amount of memory, it might cause performance degradation.
+"""
 
 def get_meminfo(hostname, username, password):
     mem_info = {
