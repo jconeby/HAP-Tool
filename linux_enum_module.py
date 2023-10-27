@@ -33,6 +33,11 @@ def send_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
 
 
 # PROCESSES
+"""
+The ps -eo user,uid,pid,ppid,vsz,rss,stat,tty,ni,cputime,comm,cmd command displays detailed information
+about the currently running processes.  Knowing what processes are running and who owns them is fundamental.
+Malware or malicous users will often run processes that you wouldn't expect to see on a well maintained system. 
+"""
 
 def get_running_processes(hostname, username, password):
     processes_info = []
@@ -876,6 +881,12 @@ def get_meminfo(hostname, username, password):
 
 
 # ACTIVE INTERNET CONNECTIONS
+"""
+The netstat -anp command can be used to gain insights into network connections on a system.  By lookin gat the open ports,
+security professionals can identify any services that shouldn't be running or listening on the system.  In addition, observing
+unfamiliar IP addresses or unexpected foreign addresses can be a sign of a compromised system.  With the -p flag, netstat provides information
+about which process is using a particular port.  This can be helpful in understanding which applications are making external connections.
+"""
 
 def get_internet_connections(hostname, username, password):
     
@@ -908,6 +919,7 @@ def get_internet_connections(hostname, username, password):
                     foreign_address, foreign_port = fields[4].rsplit(':', 1)
                     state = fields[5] if proto != 'udp' else 'N/A'
                     pid = fields[-1].split('/')[0] if '/' in fields[-1] else 'N/A'
+                    program = fields[-1].split('/')[1] if '/' in fields[-1] else 'N/A'
                     connections_info.append({
                         "hostname": hostname,
                         "Proto": proto,
@@ -919,6 +931,7 @@ def get_internet_connections(hostname, username, password):
                         "Foreign Port": foreign_port,
                         "State": state,
                         "PID": pid,
+                        "Program": program,
                         "timestamp": datetime.utcnow().isoformat()
                     })
 
@@ -933,6 +946,10 @@ def get_internet_connections(hostname, username, password):
 
 
 # UNIX SOCKETS - unix section of the netstat -anp command
+"""
+The netstat -anp command provides details on the UNIX domain sockets, which are mechanisms used for inter-process communication
+(IPC) on UNIX systems. Looking at this output can help identify unauthorized IPC, identify rogue processes, and orphaned or stale sockets.
+"""
 
 def get_unix_sockets_info(hostname, username, password):
     # List to hold the socket information.
@@ -992,6 +1009,10 @@ def get_unix_sockets_info(hostname, username, password):
     return unix_sockets_info
 
 # OS Info
+"""
+The /etc/os-release file provides information about the operating system's distribution, version, and other related details.
+
+"""
 
 def get_os_info(hostname, username, password):
     # Dictionary to hold the OS information.
@@ -1027,6 +1048,12 @@ def get_os_info(hostname, username, password):
     
     return os_info
 
+# IPTABLES - FIREWALL INFO
+"""
+The iptables -L -v -n command lists the rules in the IP packet filter rules on the Linux kernel, displaying them in a 
+verbose manner without resolving hostnames.  By running this command, you can inspect the active firewall rules on the system.
+Malicous software or attackers might add or modify the iptables rules to allow for backdoor access or other unauthorized activities.
+"""
 
 def get_iptables_info(hostname, username, password):
     # List to hold iptables information.
@@ -1144,6 +1171,10 @@ def send_data_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
 
 
 # Function to log the script execution in Elasticsearch
+"""
+The function below will create a log in the crew_log index every time the Linux script is ran.
+This can be useful if you want to track when and on what machines that the linux script was ran.
+"""
 def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames, verify_ssl=True):
     
     # pass base64 credentials in the header
