@@ -939,7 +939,7 @@ def send_data_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
 
 
 # Function to log the script execution in Elasticsearch
-def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames):
+def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames, verify_ssl=True):
     
     # pass base64 credentials in the header
     credentials = base64.b64encode(f"{es_user}:{es_pass}".encode()).decode()
@@ -957,12 +957,17 @@ def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames):
     
     document_url = f"{es_url}/crew_log/_doc"
 
-    response = requests.post(
-        document_url, 
-        json=log_object, 
-        headers=headers,
-        verify=False
-    )
+    try:
+        response = requests.post(
+            document_url, 
+            json=log_object, 
+            headers=headers,
+            verify=False
+        )
 
-    if response.status_code != 200 and response.status_code != 201:
-        print(f"Failed to insert data into Elasticsearch. Response: {response.text}")
+        # Check for response codes outside of the success range (2xx)
+        if not 200 <= response.status_code < 300:
+            print(f"Failed to insert data into Elasticsearch. Status code: {response.status_code}")
+
+    except requests.RequestException as e:
+        print(f"Error occurred while communicating with Elasticsearch: {str(e)}")
