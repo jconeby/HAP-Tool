@@ -128,7 +128,7 @@ foreach ($category in $categories) {
 $logObject = [PSCustomObject]@{
     "timestamp" = (Get-Date).ToUniversalTime().ToString("o")
     "hostname"  = $env:COMPUTERNAME
-    "command"   = ("panacea tool script survey ran on " + $hostnameString)
+    "command"   = ("HAP Windows survey script survey ran on " + $hostnameString)
 }
 
 $logJson = $logObject | ConvertTo-Json

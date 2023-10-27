@@ -86,7 +86,7 @@ Remove-Item -Path ($local_path + '*.xml') > $null
 $logObject = [PSCustomObject]@{
     "timestamp" = (Get-Date).ToUniversalTime().ToString("o")
     "hostname"  = $env:COMPUTERNAME
-    "command"   = ("panacea tool event log script ran on " + $hostnameString)
+    "command"   = ("HAP event log script ran on " + $hostnameString)
 }
 
 $logJson = $logObject | ConvertTo-Json
