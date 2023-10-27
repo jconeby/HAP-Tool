@@ -24,6 +24,7 @@ info_mapping = {
     "shadow": (lem.get_shadow, "hap-linux-shadow"),
     "lastlog": (lem.get_lastlog, "hap-linux-lastlog"),
     "authlogs": (lem.get_auth_logs, "hap-linux-authlog"),
+    "securelogs": (lem.get_secure_logs, "hap-linux-authlog"),
     "history": (lem.get_user_history, "hap-linux-history"),
     "services": (lem.get_services, "hap-linux-services"),
     "cronjobs": (lem.get_cron_jobs, "hap-linux-cronjobs"),

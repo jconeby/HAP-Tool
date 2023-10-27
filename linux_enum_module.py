@@ -275,42 +275,124 @@ def get_lastlog(hostname, username, password):
     return lastlog_info
 
 
-# AUTH LOGS - This function is to identify any odd SSH & Telent logins
+# AUTH LOGS - This function is pulling logs from /var/log/auth.log
 
 def get_auth_logs(hostname, username, password):
-    # List to hold the log information.
     logs_info = []
 
+    # Get the current UTC time in ISO 8601 format for your original timestamp
+    timestamp = datetime.utcnow().isoformat()
+
+    # Regular expression pattern for log parsing.
+    auth_pattern = re.compile(r'(?P<log_timestamp>\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2})\s(?P<systemname>[\w\-]+)\s(?P<process>\w+)\[(?P<PID>\d+)\]:\s(?P<message>.*)')
+
     try:
-        # SSH Client setup and connect.
         with paramiko.SSHClient() as client:
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
-            
-            # Determine Linux distribution
-            stdin, stdout, stderr = client.exec_command("lsb_release -i")
-            distro_info = stdout.read().decode('utf-8').strip()
-            
-            if 'Debian' in distro_info or 'Ubuntu' in distro_info:
-                log_file = "/var/log/auth.log"
-            elif 'RedHat' in distro_info or 'CentOS' in distro_info or 'Fedora' in distro_info:
-                log_file = "/var/log/secure"
-            else:
-                # Default to Debian if unable to determine
-                log_file = "/var/log/auth.log"
 
-            # Execute command and process output.
-            command = f"grep -E 'ssh|telnet' {log_file}"
+            log_file = "/var/log/auth.log"
+            log_name = "auth.log"
+            
+            # Try with sudo privileges
+            command = f"sudo -S cat {log_file} && echo 'file_exists'"
             stdin, stdout, stderr = client.exec_command(command)
+            stdin.write(f"{password}\n")  # Supply the password to sudo.
+            stdin.flush()
 
-            for line in stdout.read().decode('utf-8').splitlines():
-                logs_info.append({
-                    "hostname": hostname,
-                    "loginfo": line,
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-                
+            output = stdout.read().decode('utf-8').strip().splitlines()
+            
+            # If sudo failed, try without sudo
+            if "permission denied" in " ".join(output).lower() or not output:
+                stdin, stdout, stderr = client.exec_command(f"cat {log_file}")
+                output = stdout.read().decode('utf-8').strip().splitlines()
+
+            for line in output:
+                match = auth_pattern.match(line)
+                if match:
+                    # Convert the log_timestamp to an ISO 8601 compliant format.
+                    raw_timestamp = match.group("log_timestamp")
+                    current_year = datetime.now().year  # assuming log timestamp is from the current year
+                    dt = datetime.strptime(f"{current_year} {raw_timestamp}", '%Y %b %d %H:%M:%S')
+                    formatted_log_timestamp = dt.isoformat() + 'Z'
+
+                    logs_info.append({
+                        "hostname": hostname,
+                        "timestamp": timestamp,  # unchanged as per your request
+                        "loginfo": line,
+                        "logname": log_name,
+                        "log_timestamp": formatted_log_timestamp,  # use the new format here
+                        "systemname": match.group("systemname"),
+                        "process": match.group("process"),
+                        "PID": match.group("PID"),
+                        "message": match.group("message")
+                    })
+
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    return logs_info
+
+
+# SECURE LOGS - This function is pulling logs from /var/log/secure
+
+def get_secure_logs(hostname, username, password):
+    logs_info = []
+
+    # Get the current UTC time in ISO 8601 format for your original timestamp
+    timestamp = datetime.utcnow().isoformat()
+
+    # Regular expression pattern for log parsing.
+    secure_pattern = re.compile(r'(?P<log_timestamp>\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2})\s(?P<systemname>[\w\-]+)\s(?P<process>\w+)\[(?P<PID>\d+)\]:\s(?P<message>.*)')
+
+    try:
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+
+            log_file = "/var/log/secure"  # Adjusted for the /var/log/secure file
+            log_name = "secure"  # Changed name for clarity
+            
+            # Try with sudo privileges
+            command = f"sudo -S cat {log_file} && echo 'file_exists'"
+            stdin, stdout, stderr = client.exec_command(command)
+            stdin.write(f"{password}\n")  # Supply the password to sudo.
+            stdin.flush()
+
+            output = stdout.read().decode('utf-8').strip().splitlines()
+            
+            # If sudo failed, try without sudo
+            if "permission denied" in " ".join(output).lower() or not output:
+                stdin, stdout, stderr = client.exec_command(f"cat {log_file}")
+                output = stdout.read().decode('utf-8').strip().splitlines()
+
+            for line in output:
+                match = secure_pattern.match(line)  # Use the secure_pattern
+                if match:
+                    # Convert the log_timestamp to an ISO 8601 compliant format.
+                    raw_timestamp = match.group("log_timestamp")
+                    current_year = datetime.now().year  # assuming log timestamp is from the current year
+                    dt = datetime.strptime(f"{current_year} {raw_timestamp}", '%Y %b %d %H:%M:%S')
+                    formatted_log_timestamp = dt.isoformat() + 'Z'
+
+                    logs_info.append({
+                        "hostname": hostname,
+                        "timestamp": timestamp,  # unchanged as per your request
+                        "loginfo": line,
+                        "logname": log_name,  # This is now "secure"
+                        "log_timestamp": formatted_log_timestamp,  # use the new format here
+                        "systemname": match.group("systemname"),
+                        "process": match.group("process"),
+                        "PID": match.group("PID"),
+                        "message": match.group("message")
+                    })
+
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
     except paramiko.SSHException as e:
