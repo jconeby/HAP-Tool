@@ -256,15 +256,21 @@ def get_lastlog(hostname, username, password):
             stdin, stdout, stderr = client.exec_command('lastlog')
             # Skipping the header line of the output
             lines = stdout.read().decode('utf-8').splitlines()[1:]
+            
+            # Regex for lines that show a login.
+            pattern = re.compile(r"^(\S+)\s+(\S+)?\s+([\S\s]*?)\s+(\w{3} \w{3} \d+ \d+:\d+:\d+ [-+]\d{4} \d{4})$")
+            
             for line in lines:
-                fields = line.split(None, 3)  # Splitting by whitespace to extract fields
-                # Checking if the length of fields is 4 which indicates the user has logged in before
-                if len(fields) == 4:
-                    username, port, from_, latest = fields
-                else:  # This user has never logged in, so 'Latest' field is 'Never'
-                    username = fields[0]
-                    port = from_ = ""
-                    latest = "Never"
+                if '**Never logged in**' in line:
+                    username = line.split(None, 1)[0]
+                    port = from_ = "N/A"
+                    latest = "**Never logged in**"
+                else:
+                    match = pattern.search(line)
+                    if match:
+                        username, port, from_, latest = match.groups()
+                        port = port or "N/A"
+                        from_ = from_.strip() or "N/A"
 
                 lastlog_info.append({
                     "hostname": hostname,
@@ -434,55 +440,49 @@ hardware errors, kerel messages, network activities, service and application log
 def get_messages_logs(hostname, username, password):
     logs_info = []
 
-    # Get the current UTC time in ISO 8601 format for your original timestamp
     timestamp = datetime.utcnow().isoformat()
-
-    # Regular expression pattern for log parsing.
-    messages_pattern = re.compile(r'(?P<log_timestamp>\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2})\s(?P<systemname>[\w\-]+)\s(?P<process>\w+)\[(?P<PID>\d+)\]:\s(?P<message>.*)')
+    messages_pattern = re.compile(r'(?P<log_timestamp>\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2})\s(?P<systemname>[\w\-]+)\s(?P<process>[\w\-]+)\[?(?P<PID>\d+)?\]?:\s(?P<message>.*)')
 
     try:
-        with paramiko.SSHClient() as client:
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(hostname, username=username, password=password)
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(hostname, username=username, password=password)
 
-            log_file = "/var/log/messages"
-            log_name = "messages.log"
-            
-            # Try with sudo privileges
-            command = f"sudo -S cat {log_file} && echo 'file_exists'"
-            stdin, stdout, stderr = client.exec_command(command)
-            stdin.write(f"{password}\n")  # Supply the password to sudo.
-            stdin.flush()
+        log_file = "/var/log/messages"
+        log_name = "messages"
 
+        command = f"sudo -S cat {log_file} && echo 'file_exists'"
+        stdin, stdout, stderr = client.exec_command(command)
+        stdin.write(f"{password}\n")
+        stdin.flush()
+
+        output = stdout.read().decode('utf-8').strip().splitlines()
+        if "permission denied" in " ".join(output).lower() or not output:
+            stdin, stdout, stderr = client.exec_command(f"cat {log_file}")
             output = stdout.read().decode('utf-8').strip().splitlines()
-            
-            # If sudo failed, try without sudo
-            if "permission denied" in " ".join(output).lower() or not output:
-                stdin, stdout, stderr = client.exec_command(f"cat {log_file}")
-                output = stdout.read().decode('utf-8').strip().splitlines()
 
-            for line in output:
-                match = messages_pattern.match(line)
-                if match:
-                    # Convert the log_timestamp to an ISO 8601 compliant format.
-                    raw_timestamp = match.group("log_timestamp")
-                    current_year = datetime.now().year  # assuming log timestamp is from the current year
-                    dt = datetime.strptime(f"{current_year} {raw_timestamp}", '%Y %b %d %H:%M:%S')
-                    formatted_log_timestamp = dt.isoformat() + 'Z'
+        for line in output:
+            match = messages_pattern.match(line)
+            if match:
+                raw_timestamp = match.group("log_timestamp")
+                current_year = datetime.now().year
+                dt = datetime.strptime(f"{current_year} {raw_timestamp}", '%Y %b %d %H:%M:%S')
+                formatted_log_timestamp = dt.isoformat() + 'Z'
 
-                    logs_info.append({
-                        "hostname": hostname,
-                        "timestamp": timestamp,
-                        "loginfo": line,
-                        "logname": log_name,
-                        "log_timestamp": formatted_log_timestamp,
-                        "systemname": match.group("systemname"),
-                        "process": match.group("process"),
-                        "PID": match.group("PID"),
-                        "message": match.group("message")
-                    })
+                logs_info.append({
+                    "hostname": hostname,
+                    "timestamp": timestamp,
+                    "loginfo": line,
+                    "logname": log_name,
+                    "log_timestamp": formatted_log_timestamp,
+                    "systemname": match.group("systemname"),
+                    "process": match.group("process"),
+                    "PID": match.group("PID"),
+                    "message": match.group("message")
+                })
 
+        client.close()
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
     except paramiko.SSHException as e:

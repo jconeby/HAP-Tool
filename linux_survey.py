@@ -23,8 +23,6 @@ info_mapping = {
     "groups": (lem.get_groups, "hap-linux-groups"),
     "shadow": (lem.get_shadow, "hap-linux-shadow"),
     "lastlog": (lem.get_lastlog, "hap-linux-lastlog"),
-    "authlogs": (lem.get_auth_logs, "hap-linux-authlog"),
-    "securelogs": (lem.get_secure_logs, "hap-linux-authlog"),
     "history": (lem.get_user_history, "hap-linux-history"),
     "services": (lem.get_services, "hap-linux-services"),
     "cronjobs": (lem.get_cron_jobs, "hap-linux-cronjobs"),
@@ -60,7 +58,7 @@ for hostname in hostnames:
 # List of all index patterns used by the script
 index_patterns = [
     'hap-linux-users', 'hap-linux-groups', 'hap-linux-processes', 'hap-linux-shadow',
-    'hap-linux-lastlog', 'hap-linux-authlog', 'hap-linux-history', 'hap-linux-services',
+    'hap-linux-lastlog', 'hap-linux-history', 'hap-linux-services',
     'hap-linux-cronjobs', 'hap-linux-hosts', 'hap-linux-connections', 'hap-linux-lastb',
     'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets', 'hap-linux-os', 'hap-linux-iptables', 'crew_log'
 ]

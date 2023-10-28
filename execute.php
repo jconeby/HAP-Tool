@@ -27,6 +27,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif ($scriptType === "linuxSurvey") {
         $command = escapeshellcmd("python linux_survey.py $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
         $output = shell_exec($command);
+    } elseif ($scriptType === "linuxLogs") {
+        $command = escapeshellcmd("python linux_system_logs.py $hostnameString $username $password $elasticURL $elasticUsername $elasticPassword");
+        $output = shell_exec($command);
     }
 
     // Display the output
