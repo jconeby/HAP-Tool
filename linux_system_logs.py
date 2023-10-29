@@ -21,6 +21,7 @@ info_mapping = {
     "authlogs": (lem.get_auth_logs, "hap-linux-authlog"),
     "securelogs": (lem.get_secure_logs, "hap-linux-authlog"),
     "messagelogs": (lem.get_messages_logs, "hap-linux-messages"),
+    "bootlogs": (lem.get_boot_logs, "hap-linux-boot"),
 }
 
 for key, (gather_func, es_index) in info_mapping.items():
@@ -36,9 +37,18 @@ for key, (gather_func, es_index) in info_mapping.items():
         lem.send_to_elasticsearch(all_info, es_url, es_index, es_user, es_pass)
 
 
-# List of all index patterns used by the script
+# Index patterns that will use the time field located in the log
 index_patterns = [
-    'hap-linux-authlog', 'hap-linux-messages', 'crew_log'
+    'hap-linux-authlog', 'hap-linux-messages'
+]
+
+# Ensure all index patterns exist and if not create them
+for index_pattern in index_patterns:
+    lem.create_index_pattern(es_url, es_user, es_pass, index_pattern, "log_timestamp")
+
+# Index patterns that use the regular time field
+index_patterns = [
+    'hap-linux-boot', 'crew_log'
 ]
 
 # Ensure all index patterns exist and if not create them
