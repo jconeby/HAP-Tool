@@ -21,6 +21,8 @@ info_mapping = {
     "authlogs": (lem.get_auth_logs, "hap-linux-authlog"),
     "securelogs": (lem.get_secure_logs, "hap-linux-authlog"),
     "messagelogs": (lem.get_messages_logs, "hap-linux-messages"),
+    "lastlog": (lem.get_lastlog, "hap-linux-lastlog"),
+    "lastb": (lem.get_lastb, "hap-linux-lastb"),
     "bootlogs": (lem.get_boot_logs, "hap-linux-boot"),
 }
 
@@ -39,7 +41,7 @@ for key, (gather_func, es_index) in info_mapping.items():
 
 # Index patterns that will use the time field located in the log
 index_patterns = [
-    'hap-linux-authlog', 'hap-linux-messages'
+    'hap-linux-authlog', 'hap-linux-messages', 'hap-linux-lastlog', 'hap-linux-lastb'
 ]
 
 # Ensure all index patterns exist and if not create them
@@ -53,7 +55,7 @@ index_patterns = [
 
 # Ensure all index patterns exist and if not create them
 for index_pattern in index_patterns:
-    lem.create_index_pattern(es_url, es_user, es_pass, index_pattern)
+    lem.create_index_pattern(es_url, es_user, es_pass, index_pattern, "timestamp")
 
 # Log that the script was ran in Elastic
 lem.log_script_execution_to_elastic(es_url, es_user, es_pass, ','.join(hostnames))

@@ -262,24 +262,27 @@ def get_lastlog(hostname, username, password):
             
             for line in lines:
                 if '**Never logged in**' in line:
-                    username = line.split(None, 1)[0]
-                    port = from_ = "N/A"
-                    latest = "**Never logged in**"
+                    continue  #skip lines that have 'Never logged in'
                 else:
                     match = pattern.search(line)
                     if match:
                         username, port, from_, latest = match.groups()
                         port = port or "N/A"
                         from_ = from_.strip() or "N/A"
-
-                lastlog_info.append({
-                    "hostname": hostname,
-                    "timestamp": timestamp,
-                    "Username": username,
-                    "Port": port,
-                    "From": from_,
-                    "Latest": latest
-                })
+                        
+                        # Convert the "latest" field to an ISO 8601 compliant format for Elastic
+                        dt = datetime.strptime(f"{latest}", '%a %b %d %H:%M:%S %z %Y')
+                        log_timestamp = dt.isoformat()
+                        
+                        lastlog_info.append({
+                            "hostname": hostname,
+                            "timestamp": timestamp,
+                            "Username": username,
+                            "Port": port,
+                            "From": from_,
+                            "Latest": latest,
+                            "log_timestamp": log_timestamp
+                        })
                 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")

@@ -22,12 +22,10 @@ info_mapping = {
     "users": (lem.get_users, "hap-linux-users"),
     "groups": (lem.get_groups, "hap-linux-groups"),
     "shadow": (lem.get_shadow, "hap-linux-shadow"),
-    "lastlog": (lem.get_lastlog, "hap-linux-lastlog"),
     "history": (lem.get_user_history, "hap-linux-history"),
     "services": (lem.get_services, "hap-linux-services"),
     "cronjobs": (lem.get_cron_jobs, "hap-linux-cronjobs"),
     "hosts": (lem.get_hosts, "hap-linux-hosts"),
-    "lastb": (lem.get_lastb, "hap-linux-lastb"),
     "connections": (lem.get_connections, "hap-linux-connections"),
     "internet": (lem.get_internet_connections, "hap-linux-internet-connections"),
     "sockets": (lem.get_unix_sockets_info, "hap-linux-unix-sockets"),
@@ -58,9 +56,9 @@ for hostname in hostnames:
 # List of all index patterns used by the script
 index_patterns = [
     'hap-linux-users', 'hap-linux-groups', 'hap-linux-processes', 'hap-linux-shadow',
-    'hap-linux-lastlog', 'hap-linux-history', 'hap-linux-services',
-    'hap-linux-cronjobs', 'hap-linux-hosts', 'hap-linux-connections', 'hap-linux-lastb',
-    'hap-linux-memory', 'hap-linux-internet-connections', 'hap-linux-unix-sockets', 'hap-linux-os', 'hap-linux-iptables', 'crew_log'
+    'hap-linux-history', 'hap-linux-services','hap-linux-cronjobs', 
+    'hap-linux-hosts', 'hap-linux-connections', 'hap-linux-memory', 
+    'hap-linux-internet-connections', 'hap-linux-unix-sockets', 'hap-linux-os', 'hap-linux-iptables', 'crew_log'
 ]
 
 # Ensure all index patterns exist and if not create them
