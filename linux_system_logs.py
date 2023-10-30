@@ -24,6 +24,7 @@ info_mapping = {
     "lastlog": (lem.get_lastlog, "hap-linux-lastlog"),
     "lastb": (lem.get_lastb, "hap-linux-lastb"),
     "bootlogs": (lem.get_boot_logs, "hap-linux-boot"),
+    "dmesg": (lem.get_dmesg_logs, "hap-linux-dmesg")
 }
 
 for key, (gather_func, es_index) in info_mapping.items():
@@ -41,7 +42,7 @@ for key, (gather_func, es_index) in info_mapping.items():
 
 # Index patterns that will use the time field located in the log
 index_patterns = [
-    'hap-linux-authlog', 'hap-linux-messages', 'hap-linux-lastlog', 'hap-linux-lastb'
+    'hap-linux-authlog', 'hap-linux-messages', 'hap-linux-lastlog', 'hap-linux-lastb', 'hap-linux-dmesg'
 ]
 
 # Ensure all index patterns exist and if not create them

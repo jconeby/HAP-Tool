@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import paramiko
 import requests
 import json
@@ -1154,6 +1154,59 @@ def get_boot_logs(hostname, username, password):
                         "service_desc": match.group("service_desc")
                     })
 
+    except paramiko.AuthenticationException:
+        print(f"Authentication failed for {hostname} using username {username}")
+    except paramiko.SSHException as e:
+        print(f"Unable to establish SSH connection to {hostname}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
+
+    return logs_info
+
+# KERNEL MESSAGES - dmesg logs
+"""
+Using the dmesg command is a typical way to fetch kernel messages in Linux, which provides diagnostic and debugging information
+about the kernel and system operations.
+"""
+
+def get_dmesg_logs(hostname, username, password):
+    logs_info = []
+    
+    # Regex pattern to extract timestamp, facility, and message
+    pattern = re.compile(r'\[\s*(?P<timestamp>\d+\.\d+)\] (?P<facility>.*?): (?P<message>.*)')
+
+    try:
+        # SSH Client setup and connect.
+        with paramiko.SSHClient() as client:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(hostname, username=username, password=password)
+
+            # Get boot time.
+            _, uptime_out, _ = client.exec_command('cat /proc/uptime')
+            boot_time_seconds = float(uptime_out.read().decode('utf-8').split()[0])
+            boot_time = datetime.utcnow() - timedelta(seconds=boot_time_seconds)
+
+            # Execute dmesg command and process output.
+            _, stdout, _ = client.exec_command('dmesg')
+            lines = stdout.read().decode('utf-8').splitlines()
+
+            for line in lines:
+                match = pattern.match(line)
+                if match:
+                    rel_timestamp = float(match.group('timestamp'))
+                    log_timestamp = boot_time + timedelta(seconds=rel_timestamp)
+                    facility = match.group('facility')
+                    message = match.group('message')
+                    
+                    log_data = {
+                        "log_timestamp": log_timestamp.isoformat(),
+                        "facility": facility,
+                        "message": message,
+                        "log_info": line,
+                    }
+                    logs_info.append(log_data)
+                    
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
     except paramiko.SSHException as e:
