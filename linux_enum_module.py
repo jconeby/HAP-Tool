@@ -871,7 +871,9 @@ def get_meminfo(hostname, username, password):
         mem_info['MemTotalkB'] = mem_total_kb
         mem_info['MemFreekB'] = mem_free_kb
         mem_info['MemAvailablekB'] = mem_available_kb
-        mem_info['PercentageMemFree'] = (mem_free_kb / mem_total_kb) * 100
+        mem_info['PercentageMemFree'] = (mem_available_kb / mem_total_kb) * 100
+        mem_info['MemUsedkB'] = (mem_total_kb - mem_available_kb)
+        mem_info['PercentageMemUsed'] = ((mem_total_kb - mem_available_kb)/mem_total_kb) * 100
 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
