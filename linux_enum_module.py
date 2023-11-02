@@ -1623,7 +1623,8 @@ def send_data_to_elasticsearch(data, es_url, index_name, es_user, es_pass):
 The function below will create a log in the crew_log index every time the Linux script is ran.
 This can be useful if you want to track when and on what machines that the linux script was ran.
 """
-def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames, verify_ssl=True):
+
+def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames, message, verify_ssl=True):
     
     # pass base64 credentials in the header
     credentials = base64.b64encode(f"{es_user}:{es_pass}".encode()).decode()
@@ -1636,7 +1637,7 @@ def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames, verify_
     log_object = {
         "timestamp": datetime.utcnow().isoformat(),
         "hostname": hostnames,
-        "command": f"HAP Linux script survey ran on {hostnames}"
+        "command": f"{message} {hostnames}"
     }
     
     document_url = f"{es_url}/crew_log/_doc"
@@ -1655,3 +1656,4 @@ def log_script_execution_to_elastic(es_url, es_user, es_pass, hostnames, verify_
 
     except requests.RequestException as e:
         print(f"Error occurred while communicating with Elasticsearch: {str(e)}")
+

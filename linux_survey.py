@@ -66,4 +66,4 @@ for index_pattern in index_patterns:
     lem.create_index_pattern(es_url, es_user, es_pass, index_pattern, "timestamp")
 
 # Log that the script was ran in Elastic
-lem.log_script_execution_to_elastic(es_url, es_user, es_pass, ','.join(hostnames))
+lem.log_script_execution_to_elastic(es_url, es_user, es_pass, ','.join(hostnames), "HAP-Tool Linux Survey ran on")
