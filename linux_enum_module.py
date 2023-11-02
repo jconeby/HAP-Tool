@@ -51,7 +51,21 @@ def get_running_processes(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
-            
+
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
+
             # Execute command and process output.
             command = 'ps -eo user,uid,pid,ppid,vsz,rss,stat,tty,ni,cputime,comm,cmd'
             stdin, stdout, stderr = client.exec_command(command)
@@ -95,7 +109,9 @@ def get_running_processes(hostname, username, password):
                     "COMM": fields[10],
                     "CMD": fields[11],
                     "Status": status_description,
-                    "ParentProcessName": parent_process_name
+                    "ParentProcessName": parent_process_name,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
                 
     except paramiko.AuthenticationException:
@@ -106,7 +122,6 @@ def get_running_processes(hostname, username, password):
         print(f"Unexpected error occurred while connecting to {hostname}: {str(e)}")
     
     return processes_info
-
 
 
 # LOCAL USERS
@@ -124,6 +139,20 @@ def get_users(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('cat /etc/passwd')
@@ -133,7 +162,9 @@ def get_users(hostname, username, password):
                     "hostname": hostname,
                     "timestamp": timestamp,
                     "user": user, 
-                    "userinfo": line
+                    "userinfo": line,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
                 
     except paramiko.AuthenticationException:
@@ -161,6 +192,20 @@ def get_groups(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('cat /etc/group')
@@ -170,7 +215,9 @@ def get_groups(hostname, username, password):
                     "hostname": hostname,
                     "timestamp": timestamp,
                     "group": group,
-                    "groupinfo": line
+                    "groupinfo": line,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
                 
     except paramiko.AuthenticationException:
@@ -198,6 +245,20 @@ def get_shadow(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute sudo command and process output.
             command = 'sudo -S cat /etc/shadow'  # -S option makes sudo read password from stdin
@@ -218,7 +279,9 @@ def get_shadow(hostname, username, password):
                     "hostname": hostname,
                     "timestamp": timestamp,
                     "user": user,
-                    "shadow_info": line
+                    "shadow_info": line,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
                 
     except paramiko.AuthenticationException:
@@ -251,6 +314,20 @@ def get_lastlog(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('lastlog')
@@ -281,7 +358,9 @@ def get_lastlog(hostname, username, password):
                             "Port": port,
                             "From": from_,
                             "Latest": latest,
-                            "log_timestamp": log_timestamp
+                            "log_timestamp": log_timestamp,
+                            "system-hostname": system_hostname,
+                            "machine-id": system_machine_id
                         })
                 
     except paramiko.AuthenticationException:
@@ -318,6 +397,20 @@ def get_auth_logs(hostname, username, password):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
 
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
+
             log_file = "/var/log/auth.log"
             log_name = "auth.log"
             
@@ -352,7 +445,9 @@ def get_auth_logs(hostname, username, password):
                         "systemname": match.group("systemname"),
                         "process": match.group("process"),
                         "PID": match.group("PID"),
-                        "message": match.group("message")
+                        "message": match.group("message"),
+                        "system-hostname": system_hostname,
+                        "machine-id": system_machine_id
                     })
 
     except paramiko.AuthenticationException:
@@ -386,6 +481,20 @@ def get_secure_logs(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
 
             log_file = "/var/log/secure"  # Adjusted for the /var/log/secure file
             log_name = "secure"  # Changed name for clarity
@@ -421,7 +530,9 @@ def get_secure_logs(hostname, username, password):
                         "systemname": match.group("systemname"),
                         "process": match.group("process"),
                         "PID": match.group("PID"),
-                        "message": match.group("message")
+                        "message": match.group("message"),
+                        "system-hostname": system_hostname,
+                        "machine-id": system_machine_id
                     })
 
     except paramiko.AuthenticationException:
@@ -451,6 +562,20 @@ def get_messages_logs(hostname, username, password):
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(hostname, username=username, password=password)
+
+        # Try to get system's FQDN
+        try:
+            _, sys_hostname_out, _ = client.exec_command('hostname -f')
+            system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+        except:
+            system_hostname - "N/A"
+
+        # Try to get system's machine-id
+        try:
+            _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+            system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+        except:
+            system_machine_id = "N/A"
 
         log_file = "/var/log/messages"
         log_name = "messages"
@@ -482,7 +607,9 @@ def get_messages_logs(hostname, username, password):
                     "systemname": match.group("systemname"),
                     "process": match.group("process"),
                     "PID": match.group("PID"),
-                    "message": match.group("message")
+                    "message": match.group("message"),
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
 
         client.close()
@@ -520,6 +647,20 @@ def get_user_history(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command(command)
@@ -534,7 +675,9 @@ def get_user_history(hostname, username, password):
                     "user": user.strip(),
                     "command": cmd.strip(),
                     "history_info": line.strip(),
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
                 
     except paramiko.AuthenticationException:
@@ -559,6 +702,20 @@ def get_services(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('systemctl list-units --type=service --all')
@@ -589,7 +746,9 @@ def get_services(hostname, username, password):
                     "load": load_status,
                     "active": active_status,
                     "sub": sub_status,
-                    "timestamp": timestamp
+                    "timestamp": timestamp,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
                 
     except paramiko.AuthenticationException:
@@ -613,6 +772,20 @@ def get_cron_jobs(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('cat /etc/crontab')
@@ -628,7 +801,9 @@ def get_cron_jobs(hostname, username, password):
                             "dow": fields[4],
                             "user": fields[5],
                             "command": ' '.join(fields[6:]),
-                            "croninfo": line  # Added croninfo
+                            "croninfo": line,  # Added croninfo
+                            "system-hostname": system_hostname,
+                            "machine-id": system_machine_id
                         }
 
                         # Get the current UTC time in ISO 8601 format
@@ -667,6 +842,20 @@ def get_hosts(hostname, username, password):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
 
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
+
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('cat /etc/hosts')
             for line in stdout.read().decode('utf-8').splitlines():
@@ -681,7 +870,9 @@ def get_hosts(hostname, username, password):
                                     "ip_address": ip_address,
                                     "host": host,
                                     "timestamp": datetime.utcnow().isoformat(),
-                                    "hostname": hostname
+                                    "hostname": hostname,
+                                    "system-hostname": system_hostname,
+                                    "machine-id": system_machine_id
                                 }
                                 hosts_info.append(host_data)
 
@@ -713,6 +904,20 @@ def get_connections(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
 
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('netstat -antup')
@@ -746,7 +951,9 @@ def get_connections(hostname, username, password):
                     "PID": pid,
                     "Program": program,
                     "timestamp": datetime.utcnow().isoformat(),
-                    "hostname": hostname
+                    "hostname": hostname,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 }
                 connections_info.append(connection_data)
 
@@ -779,6 +986,20 @@ def get_lastb(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
 
             # Execute command and process output.
             command = 'sudo -S lastb'  # -S option makes sudo read password from stdin
@@ -822,7 +1043,9 @@ def get_lastb(hostname, username, password):
                     "time": time_info,
                     "timestamp": datetime.utcnow().isoformat(),
                     "log_timestamp": formatted_log_timestamp,
-                    "hostname": hostname
+                    "hostname": hostname,
+                    "system-hostname": system_hostname,
+                    "machine-id": system_machine_id
                 }
                 lastb_info_list.append(lastb_data)
 
@@ -856,6 +1079,20 @@ def get_meminfo(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('cat /proc/meminfo')
@@ -874,6 +1111,8 @@ def get_meminfo(hostname, username, password):
         mem_info['PercentageMemFree'] = (mem_available_kb / mem_total_kb) * 100
         mem_info['MemUsedkB'] = (mem_total_kb - mem_available_kb)
         mem_info['PercentageMemUsed'] = ((mem_total_kb - mem_available_kb)/mem_total_kb) * 100
+        mem_info['system-hostname'] = system_hostname
+        mem_info['machine-id'] = system_machine_id
 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -903,6 +1142,20 @@ def get_internet_connections(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+            # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('netstat -anp')
@@ -937,7 +1190,9 @@ def get_internet_connections(hostname, username, password):
                         "State": state,
                         "PID": pid,
                         "Program": program,
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "system-hostname": system_hostname,
+                        "machine-id": system_machine_id
                     })
 
     except paramiko.AuthenticationException:
@@ -966,6 +1221,21 @@ def get_unix_sockets_info(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
+
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('netstat -anp')
@@ -999,6 +1269,8 @@ def get_unix_sockets_info(hostname, username, password):
                             "Path": match.group(8) if match.group(8) else 'N/A',
                             "hostname": hostname,
                             "timestamp": datetime.utcnow().isoformat(),
+                            "system-hostname": system_hostname,
+                            "machine-id": system_machine_id
                         })
 
     except paramiko.AuthenticationException:
@@ -1032,6 +1304,20 @@ def get_os_info(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute command and process output.
             stdin, stdout, stderr = client.exec_command('cat /etc/os-release')
@@ -1043,6 +1329,8 @@ def get_os_info(hostname, username, password):
             # Add hostname and timestamp to the dictionary.
             os_info["hostname"] = hostname
             os_info["timestamp"] = timestamp
+            os_info["system-hostname"] = system_hostname
+            os_info["machine-id"] = system_machine_id
                 
     except paramiko.AuthenticationException:
         print(f"Authentication failed for {hostname} using username {username}")
@@ -1073,6 +1361,20 @@ def get_iptables_info(hostname, username, password):
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
+
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
             
             # Execute sudo command and process output.
             command = 'sudo -S iptables -L -v -n'  # -S option makes sudo read password from stdin
@@ -1099,7 +1401,9 @@ def get_iptables_info(hostname, username, password):
                     "hostname": hostname,
                     "timestamp": timestamp,
                     "Chain": current_chain,
-                    "rule_info": line.strip()
+                    "rule_info": line.strip(),
+                    "system_hostname": system_hostname,
+                    "machine-id": system_machine_id
                 })
 
     except paramiko.AuthenticationException:
@@ -1130,6 +1434,20 @@ def get_boot_logs(hostname, username, password):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
 
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
+
             log_file = "/var/log/boot.log"
             log_name = "boot.log"
             command = f"sudo -S cat {log_file} && echo 'file_exists'"
@@ -1153,7 +1471,9 @@ def get_boot_logs(hostname, username, password):
                         "logname": log_name,
                         "status": match.group("status"),
                         "action": match.group("action"),
-                        "service_desc": match.group("service_desc")
+                        "service_desc": match.group("service_desc"),
+                        "system-hostname": system_hostname,
+                        "machine-id": system_machine_id
                     })
 
     except paramiko.AuthenticationException:
@@ -1184,6 +1504,20 @@ def get_dmesg_logs(hostname, username, password):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(hostname, username=username, password=password)
 
+             # Try to get system's FQDN
+            try:
+                _, sys_hostname_out, _ = client.exec_command('hostname -f')
+                system_hostname = sys_hostname_out.read().decode('utf-8').strip()
+            except:
+                system_hostname - "N/A"
+
+            # Try to get system's machine-id
+            try:
+                _, sys_machine_id_out, _ = client.exec_command('cat /etc/machine-id')
+                system_machine_id = sys_machine_id_out.read().decode('utf-8').strip()
+            except:
+                system_machine_id = "N/A"
+
             # Get boot time.
             _, uptime_out, _ = client.exec_command('cat /proc/uptime')
             boot_time_seconds = float(uptime_out.read().decode('utf-8').split()[0])
@@ -1206,6 +1540,8 @@ def get_dmesg_logs(hostname, username, password):
                         "facility": facility,
                         "message": message,
                         "log_info": line,
+                        "system-hostname": system_hostname,
+                        "machine-id": system_machine_id
                     }
                     logs_info.append(log_data)
                     
