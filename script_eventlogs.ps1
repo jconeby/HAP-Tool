@@ -65,7 +65,7 @@ $EndTime = (Get-Date).AddDays(1)
 # Path where the files are stored on the web server
 $local_path = ($env:USERPROFILE + '\AppData\Local\Temp\XML\')
 
-Get-CriticalEventXML -BeginTime $BeginTime -EndTime $EndTime -ComputerName $successfulHosts -Credential $Credential
+Get-CriticalEventXML -BeginTime $BeginTime -EndTime $EndTime -ComputerName $successfulHosts -Credential $Credential > $null
 
 $xmlFiles = Get-ChildItem -Path $local_path -Filter "*-events.xml"
 
