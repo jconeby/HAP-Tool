@@ -15,7 +15,10 @@ param (
     [string]$elasticUsername,
 
     [Parameter(Mandatory=$true)]
-    [string]$elasticPassword
+    [string]$elasticPassword,
+
+    [Parameter(Mandatory=$true)]
+    [int]$eventLogDays
 
 )
 
@@ -53,8 +56,10 @@ foreach ($hostname in $hostnames) {
 $indexName = "hap-eventlogs"
 $documentUrl = "$elasticURL/$indexName/_doc"
 
-# Capture the last 1 days of events
-$BeginTime = (Get-Date).AddDays(-30)
+
+# Capture the last x days of events depending on the settings
+$eventLogDays = $eventLogDays * -1 # Make eventLogDays a negative number
+$BeginTime = (Get-Date).AddDays($eventLogDays)
 $EndTime = (Get-Date).AddDays(1)
 
 # Path where the files are stored on the web server
