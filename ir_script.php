@@ -112,29 +112,59 @@
             background-color: #009900;
             
         }
+
+        /* Normal state with light grey color */
+        .icon-gear {
+            fill: #D3D3D3; /* Light grey color */
+            transition: filter 0.3s; /* Smooth transition for the hover effect */
+        }
+
+        /* Hover state */
+        .icon-gear:hover {
+            filter: brightness(0) invert(1); /* Invert colors to white */
+        }
+
     </style>
     <link rel="stylesheet" href="bootstrap-5.3.0-dist/css/bootstrap.min.css">
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-        <a class="navbar-brand" href="#">OPS C2</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link" href="index.html">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="ir_script.html">Enumerate</a>
-                </li>
-            </ul>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">OPS C2</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="ir_script.php">Enumerate</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="settings.php">
+                            <img class="icon-gear" src="img/gear-solid.svg" alt="Settings" width="25" height="25">
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
+
+<!-- PHP code to query data from settings.db SQLite database -->
+<?php
+$db_path = 'C:\xampp\htdocs\hap-tool\settings.db'; // Adjust the path accordingly
+$db = new SQLite3($db_path);
+
+// Fetch webapp credentials
+$credentials = $db->querySingle("SELECT * FROM webapp_credentials ORDER BY id DESC LIMIT 1", true);
+
+$db->close();
+?>
 
 <!-- Form Content -->
 <div class="form-container">
@@ -142,32 +172,32 @@
     <form action="execute.php" method="post">
         <div class="form-row">
             <label for="hostname">Hostnames:</label>
-            <input type="text" id="hostname" name="hostname[]" value="localhost,localhost" required multiple="multiple">
+            <input type="text" id="hostname" name="hostname[]" value="" required multiple="multiple">
         </div>        
         
         <div class="form-row">
             <label for="username">Username:</label>
-            <input type="text" id="username" name="username" value="Administrator" required>
+            <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($credentials['username'] ?? ''); ?>" required>
         </div>
 
         <div class="form-row">
             <label for="password">Password:</label>
-            <input type="password" id="password" name="password" value="" required>
+            <input type="password" id="password" name="password" value="<?php echo htmlspecialchars($credentials['password'] ?? ''); ?>" required>
         </div>
 
         <div class="form-row">
             <label for="elasticURL">Elastic URL:</label>
-            <input type="text" id="elasticURL" name="elasticURL" value="https://192.168.159.140:9200" required>
+            <input type="text" id="elasticURL" name="elasticURL" value="<?php echo htmlspecialchars($credentials['elasticURL'] ?? ''); ?>" required>
         </div>
 
         <div class="form-row">
             <label for="elasticUsername">Elastic Username:</label>
-            <input type="text" id="elasticUsername" name="elasticUsername" value="elastic" required>
+            <input type="text" id="elasticUsername" name="elasticUsername" value="<?php echo htmlspecialchars($credentials['elasticUsername'] ?? ''); ?>" required>
         </div>
 
         <div class="form-row">
             <label for="elasticPassword">Elastic Password:</label>
-            <input type="password" id="elasticPassword" name="elasticPassword" value="ck75gqRfKObRmb88nDxh" required>
+            <input type="password" id="elasticPassword" name="elasticPassword" value="<?php echo htmlspecialchars($credentials['elasticPassword'] ?? ''); ?>" required>
         </div>
 
         <div class="form-row">
